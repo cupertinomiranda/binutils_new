@@ -685,6 +685,7 @@ tokenize_arguments (char *str,
 	  if (*input_line_pointer != '@')
 	    goto normalsymbol; /* this is not a relocation.  */
 
+	relocationsym:
 	  /* A relocation opernad has the following form
 	     @identifier@relocation_type.  The identifier is already
 	     in tok!  */
@@ -763,7 +764,14 @@ tokenize_arguments (char *str,
 	    goto err;
 
 	  tok->X_op = O_absent;
+	  tok->X_md = O_absent;
 	  expression (tok);
+
+	  /* Legacy: There are cases when we have
+	     identifier@relocation_type, if it is the case parse the
+	     relocation type as well.  */
+	  if (*input_line_pointer == '@')
+	    goto relocationsym;
 
 	normalsymbol:
 	  debug_exp (tok);
