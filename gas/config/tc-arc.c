@@ -1267,23 +1267,11 @@ md_apply_fix (fixS *fixP,
 	{
 	case BFD_RELOC_ARC_TLS_DTPOFF:
 	case BFD_RELOC_ARC_TLS_LE_32:
-	  if (fixP->fx_done)
-	    {
-	      gas_assert (!fixP->fx_addsy);
-	      gas_assert (!fixP->fx_subsy);
-	      md_number_to_chars_midend (fixpos, value, fixP->fx_size);
-	      return;
-	    }
-	  else
-	    {
-	      value = fixP->fx_offset;
-	      fixP->fx_offset = 0;
-	    }
+	  fixP->fx_offset = 0;
 	  /* Fall through.  */
 	case BFD_RELOC_ARC_TLS_GD_GOT:
 	case BFD_RELOC_ARC_TLS_IE_GOT:
 	  S_SET_THREAD_LOCAL (fixP->fx_addsy);
-	  md_number_to_chars_midend (fixpos, value, fixP->fx_size);
 	  break;
 
 	case BFD_RELOC_ARC_TLS_GD_LD:
@@ -1297,10 +1285,8 @@ md_apply_fix (fixS *fixP,
 	case BFD_RELOC_ARC_TLS_GD_CALL:
 	  /* These two relocs are there just to allow ld to change the tls
 	     model for this symbol, by patching the code.  */
-	  /* Fall through.  */
 	  /* The offset - and scale, if any - will be installed by the
 	     linker.  */
-	  gas_assert (!fixP->fx_done);
 	  S_SET_THREAD_LOCAL (fixP->fx_addsy);
 	  break;
 
