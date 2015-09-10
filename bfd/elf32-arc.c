@@ -423,10 +423,15 @@ debug_arc_reloc (struct arc_relocation_data reloc_data)
     {
       fprintf (stderr, "IN IF\n");
       fprintf (stderr,
-	       "  section name = %s, output_offset 0x%08x, output_section->vma = 0x%08x\n",
+	       "  section name = %s, output_offset 0x%08x",
 	       reloc_data.sym_section->name,
-	       (unsigned int) reloc_data.sym_section->output_offset,
-	       (unsigned int) reloc_data.sym_section->output_section->vma);
+	       (unsigned int) reloc_data.sym_section->output_offset);
+      if(reloc_data.sym_section->output_section != NULL)
+	fprintf (stderr,
+		 ", output_section->vma = 0x%08x",
+		 (unsigned int) reloc_data.sym_section->output_section->vma);
+
+      fprintf (stderr, "\n");
     }
   else
     fprintf (stderr, "	symbol section is NULL\n");
@@ -448,29 +453,56 @@ debug_arc_reloc (struct arc_relocation_data reloc_data)
     fprintf (stderr, "	input section is NULL\n");
 }
 
+#define TCB_SIZE (8)
+
 #define S (reloc_data.sym_value \
-	   + reloc_data.sym_section->output_offset \
-	   + reloc_data.sym_section->output_section->vma)
+	   + (reloc_data.sym_section->output_section != NULL ? \
+	     (reloc_data.sym_section->output_offset \
+  	      + reloc_data.sym_section->output_section->vma) : 0) \
+	  )
+#define L (reloc_data.sym_value \
+	   + (reloc_data.sym_section->output_section != NULL ? \
+	     (reloc_data.sym_section->output_offset \
+	      + reloc_data.sym_section->output_section->vma) : 0) \
+	  )
 #define A (reloc_data.reloc_addend)
 #define B (0)
 #define G (reloc_data.got_offset_value)
 #define GOT (reloc_data.got_symbol_vma + 12)
-#define L (reloc_data.sym_value \
-	   + reloc_data.sym_section->output_section->vma \
-	   + reloc_data.sym_section->output_offset)
 #define MES (0)
 	/* P: relative offset to PCL The offset should be to the current location
 	 * aligned to 32 bits. */
 #define P ( \
-	    (reloc_data.input_section->output_section->vma \
-	     + reloc_data.input_section->output_offset \
-	     + (reloc_data.reloc_offset - (bitsize >= 32 ? 4 : 0)) \
+	    ( \
+	      (reloc_data.sym_section->output_section != NULL ? \
+		reloc_data.input_section->output_section->vma : 0) \
 	    ) & ~0x3)
 #define SECTSTAR (reloc_data.input_section->output_offset)
 #define SECTSTART (reloc_data.input_section->output_offset)
 #define _SDA_BASE_ (reloc_data.sdata_begin_symbol_vma)	
-
+#define TLS_REL (elf_hash_table(info)->tls_sec->output_section->vma)
 #define none (0)
+
+#define PRINT_DEBUG_RELOC_INFO_BEFORE \
+      printf ("FORMULA = " #FORMULA "\n"); \
+      printf ("S = 0x%x\n", S); \
+      printf ("A = 0x%x\n", A); \
+      printf ("L = 0x%x\n", L); \
+      /* printf ("P1 = 0x%x\n", ((reloc_data.input_section->output_section->vma + reloc_data.input_section->output_offset) + reloc_data.reloc_offset)); */ \
+      /* printf ("PCL = 0x%x\n", ((reloc_data.input_section->output_section->vma + reloc_data.input_section->output_offset) + reloc_data.reloc_offset) & ~0x3); */ \
+      printf ("PCL = 0x%x\n", P); \
+      printf ("P = 0x%x\n", P); \
+      printf ("G = 0x%x\n", G); \
+      printf ("SDA_OFFSET = 0x%x\n", _SDA_BASE_); \
+      printf ("SDA_SET = %d\n", reloc_data.sdata_begin_symbol_vma_set); \
+      printf ("GOT_OFFSET = 0x%x\n", GOT); \
+      relocation = FORMULA ; \
+      printf ("relocation = 0x%08x\n", relocation); \
+      printf ("before = 0x%08x\n", (unsigned int) insn); \
+      printf ("data   = 0x%08x (%u) (%d)\n", (unsigned int) relocation, (unsigned int) relocation, (int) relocation); 
+
+#define PRINT_DEBUG_RELOC_INFO_AFTER \
+-      printf ("after  = 0x%08x\n", (unsigned int) insn); 
 
 #define ARC_RELOC_HOWTO(TYPE, VALUE, SIZE, BITSIZE, RELOC_FUNCTION, OVERFLOW, FORMULA) \
   case R_##TYPE: \
@@ -482,7 +514,7 @@ debug_arc_reloc (struct arc_relocation_data reloc_data)
     break;
 
 static bfd_reloc_status_type
-arc_do_relocation (bfd_byte * contents, struct arc_relocation_data reloc_data)
+arc_do_relocation (bfd_byte * contents, struct arc_relocation_data reloc_data, struct bfd_link_info *info)
 {
   bfd_vma relocation = 0;
   bfd_vma insn;
@@ -722,10 +754,10 @@ elf_arc_relocate_section (bfd * output_bfd,
 	  reloc_data.sym_value = sym->st_value;
 	  reloc_data.sym_section = sec;
 
-	    if (is_reloc_for_GOT (reloc_data.howto))
+	  if (is_reloc_for_GOT (reloc_data.howto))
 	    {
 	      local_got_offsets = arc_get_local_got_offsets (output_bfd);
-	    reloc_data.got_offset_value = local_got_offsets[r_symndx];
+	      reloc_data.got_offset_value = local_got_offsets[r_symndx];
 	    }
 
 	  reloc_data.should_relocate = TRUE;
@@ -749,7 +781,7 @@ elf_arc_relocate_section (bfd * output_bfd,
 
 	      reloc_data.should_relocate = TRUE;
 
-	      if (is_reloc_for_GOT (howto))
+	      if (is_reloc_for_GOT (howto) && bfd_link_pic (info))
 		{
 		  struct dynamic_sections ds =
 		  arc_create_dynamic_sections (output_bfd, info);
@@ -758,8 +790,10 @@ elf_arc_relocate_section (bfd * output_bfd,
 		   * reloc.  */
 		  bfd_vma relocation =
 		    reloc_data.sym_value + reloc_data.reloc_addend
-		    + reloc_data.sym_section->output_offset
-		    + reloc_data.sym_section->output_section->vma;
+		    + (reloc_data.sym_section->output_section != NULL ? 
+			(reloc_data.sym_section->output_offset
+		         + reloc_data.sym_section->output_section->vma)
+		      : 0);
 
 		  bfd_put_32 (output_bfd, relocation, ds.sgot->contents + h->got.offset);
 
@@ -818,7 +852,7 @@ elf_arc_relocate_section (bfd * output_bfd,
 	}
 
       DEBUG_ARC_RELOC (reloc_data);
-      if (arc_do_relocation (contents, reloc_data) != bfd_reloc_ok)
+      if (arc_do_relocation (contents, reloc_data, info) != bfd_reloc_ok)
 	return FALSE;
     }
 
@@ -839,17 +873,17 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
 	.srelplt = NULL
   };
 
+  dynobj = (elf_hash_table (info))->dynobj;
   if (dynobj == NULL)
     {
       elf_hash_table (info)->dynobj = dynobj = abfd;
       if (!_bfd_elf_create_got_section (dynobj, info))
-	return ds;
+	BFD_ASSERT(0);
+      if(!_bfd_elf_create_dynamic_sections (dynobj, info))
+	BFD_ASSERT(0);
     }
-  else
-    dynobj = (elf_hash_table (info))->dynobj;
 
   ds.sgot = bfd_get_section_by_name (dynobj, ".got");
-
   ds.srelgot = bfd_get_section_by_name (dynobj, ".rela.got");
   if (ds.srelgot == NULL)
     {
@@ -864,7 +898,6 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
 	  || !bfd_set_section_alignment (dynobj, ds.srelgot, 2))
 	return ds;
     }
-
   ds.sgotplt = bfd_get_section_by_name (dynobj, ".got.plt");
 
   ds.sdyn = bfd_get_section_by_name (dynobj, ".dynamic");
@@ -1558,9 +1591,6 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
        * we are not creating the dynamic sections, we will not actually
        * use these entries.  Reset the size of .rela.got, which will cause
        * it to get stripped from the output file below.  */
-//	s = bfd_get_section_by_name (dynobj, ".rela.got");
-//	if (s != NULL)
-//	s->size = 0;
 
       ds.srelgot->size = 0;
     }
@@ -1583,7 +1613,7 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
       if (s->contents == NULL && s->size != 0)
 	  return FALSE;
 
-      if (s->size == 0)
+      if (s->size == 0 && strcmp(s->name, ".rela.plt") != 0) 
 	{
 	  s->flags |= SEC_EXCLUDE;
 	  continue;

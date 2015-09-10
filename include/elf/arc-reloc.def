@@ -382,12 +382,12 @@ ARC_RELOC_HOWTO(ARC_TLS_GD_GOT, 69, \
                 32, \
                 replace_word32, \
                 dont, \
-                0)
+                ( ( GOT + A ) - P ))
 
 ARC_RELOC_HOWTO(ARC_TLS_GD_LD, 70, \
                 2, \
-                32, \
-                replace_word32, \
+                0, \
+                replace_none, \
                 dont, \
                 0)
 
@@ -403,35 +403,35 @@ ARC_RELOC_HOWTO(ARC_TLS_IE_GOT, 72, \
                 32, \
                 replace_word32, \
                 dont, \
-                0)
+                ( ( GOT + A ) - P ))
 
 ARC_RELOC_HOWTO(ARC_TLS_DTPOFF, 67, \
                 2, \
                 32, \
                 replace_word32, \
                 dont, \
-                0)
+                ( S - TLS_REL ))
 
 ARC_RELOC_HOWTO(ARC_TLS_DTPOFF_S9, 73, \
                 2, \
                 32, \
                 replace_word32, \
                 dont, \
-                0)
+                ( S - TLS_REL ))
 
 ARC_RELOC_HOWTO(ARC_TLS_LE_S9, 74, \
                 2, \
                 32, \
                 replace_word32, \
                 dont, \
-                0)
+                ( ( S + TCB_SIZE ) - TLS_REL ))
 
 ARC_RELOC_HOWTO(ARC_TLS_LE_32, 75, \
                 2, \
                 32, \
                 replace_word32, \
                 dont, \
-                0)
+                ( ( S + TCB_SIZE ) - TLS_REL ))
 
 ARC_RELOC_HOWTO(ARC_S25W_PCREL_PLT, 76, \
                 2, \
