@@ -1,6 +1,13 @@
 #ifndef ARC_PLT_H
 #define ARC_PLT_H
 
+
+/* Instructions appear in memory as a sequence of half-words (16 bit);
+   individual half-words are represented on the target in target byte order.
+   We use 'unsigned short' on the host to represent the PLT templates,
+   and translate to target byte order as we copy to the target.  */
+typedef uint16_t insn_hword;
+
 enum plt_reloc_symbol {
   LAST_RELOC = 0,
 

@@ -27,6 +27,7 @@
 #include "libiberty.h"
 #include "opcode/arc-func.h"
 #include <stdint.h>
+#include "arc-plt.h"
 
 #define printf(...)
 #define fprintf(...)
@@ -1025,35 +1026,28 @@ elf_arc_check_relocs (bfd * abfd,
 
 #define ELF_DYNAMIC_INTERPRETER  "/sbin/ld-uClibc.so"
 
-/* Instructions appear in memory as a sequence of half-words (16 bit);
-   individual half-words are represented on the target in target byte order.
-   We use 'unsigned short' on the host to represent the PLT templates,
-   and translate to target byte order as we copy to the target.  */
-typedef uint16_t insn_hword;
-
-#include "arc-plt.h"
 
 static struct plt_version_t *
-arc_get_plt_version (bfd *output_bfd)
+arc_get_plt_version (struct bfd_link_info *info)
 {
   int i;
   for(i = 0; i < 1; i++) {
     printf("%d: size1 = %d, size2 = %d\n", i, plt_versions[i].entry_size, plt_versions[i].elem_size);
   }
 
-  if (bfd_get_mach (output_bfd) == bfd_mach_arc_arcv2) i
+  if (bfd_get_mach (info->output_bfd) == bfd_mach_arc_arcv2)
     {
       if(bfd_link_pic (info))
-        return &(plt_versions[ELF_ARCV2_PIC];
+        return &(plt_versions[ELF_ARCV2_PIC]);
       else
-        return &(plt_versions[ELF_ARCV2_ABS];
+        return &(plt_versions[ELF_ARCV2_ABS]);
     }
   else
     {
       if(bfd_link_pic (info))
-        return &(plt_versions[ELF_ARC_PIC];
+        return &(plt_versions[ELF_ARC_PIC]);
       else
-        return &(plt_versions[ELF_ARC_ABS];
+        return &(plt_versions[ELF_ARC_ABS]);
     }
 }
 
@@ -1064,7 +1058,7 @@ add_symbol_to_plt (struct bfd_link_info *info)
   struct dynamic_sections ds = arc_create_dynamic_sections (dynobj, info);
   bfd_vma	  ret;
 
-  struct plt_version_t *plt_data = arc_get_plt_version ();
+  struct plt_version_t *plt_data = arc_get_plt_version (info);
 
   /* If this is the first .plt entry, make room for the special first entry.  */
   if (ds.splt->size == 0)
@@ -1134,7 +1128,7 @@ relocate_plt_for_symbol (bfd *output_bfd,
 			 struct elf_link_hash_entry *h)
 {
   bfd		 *dynobj = elf_hash_table (info)->dynobj;
-  struct plt_version_t *plt_data = arc_get_plt_version ();
+  struct plt_version_t *plt_data = arc_get_plt_version (info);
   struct dynamic_sections ds = arc_create_dynamic_sections (dynobj, info);
 
   //bfd_vma plt_index = h->plt.offset / plt_data->elem_size;
@@ -1171,44 +1165,44 @@ relocate_plt_for_symbol (bfd *output_bfd,
     bfd_elf32_swap_reloca_out (output_bfd, &rel, loc);
   }
 
-  //if (h->got.offset != (bfd_vma) -1)
-  //  {
-  //    Elf_Internal_Rela rel;
-  //    bfd_byte *loc;
+  if (h->got.offset != (bfd_vma) -1)
+    {
+      Elf_Internal_Rela rel;
+      bfd_byte *loc;
 
-  //    rel.r_offset = (ds.sgot->output_section->vma
-  //      	      + ds.sgot->output_offset
-  //      	      + h->got.offset);
-  //    fprintf(stderr, "BLA = %d\n", h->got.offset);
+      rel.r_offset = (ds.sgot->output_section->vma
+        	      + ds.sgot->output_offset
+        	      + h->got.offset);
+      fprintf(stderr, "BLA = %d\n", h->got.offset);
 
-  //    /* If this is a -Bsymbolic link, and the symbol is defined
-  //       locally, we just want to emit a RELATIVE reloc.  Likewise if
-  //       the symbol was forced to be local because of a version file.
-  //       The entry in the global offset table will already have been
-  //       initialized in the relocate_section function.  */
-  //    if (bfd_link_pic (info)
-  //        && (info->symbolic || h->dynindx == -1)
-  //        && h->def_regular)
-  //      {
-  //        rel.r_addend = 0;
-  //        rel.r_info = ELF32_R_INFO (0, R_ARC_RELATIVE);
-  //      }
-  //    else if (h->dynindx == -1)
-  //      memset (&rel, 0, sizeof rel);
-  //    else
-  //      {
-  //        bfd_put_32 (output_bfd, (bfd_vma) 0, ds.sgot->contents + h->got.offset);
-  //        /* RELA relocs */
-  //        rel.r_addend = 0;
-  //        rel.r_info = ELF32_R_INFO (h->dynindx, R_ARC_GLOB_DAT);
-  //      }
+      /* If this is a -Bsymbolic link, and the symbol is defined
+         locally, we just want to emit a RELATIVE reloc.  Likewise if
+         the symbol was forced to be local because of a version file.
+         The entry in the global offset table will already have been
+         initialized in the relocate_section function.  */
+      if (bfd_link_pic (info)
+          && (info->symbolic || h->dynindx == -1)
+          && h->def_regular)
+        {
+          rel.r_addend = 0;
+          rel.r_info = ELF32_R_INFO (0, R_ARC_RELATIVE);
+        }
+      else if (h->dynindx == -1)
+        memset (&rel, 0, sizeof rel);
+      else
+        {
+          bfd_put_32 (output_bfd, (bfd_vma) 0, ds.sgot->contents + h->got.offset);
+          /* RELA relocs */
+          rel.r_addend = 0;
+          rel.r_info = ELF32_R_INFO (h->dynindx, R_ARC_GLOB_DAT);
+        }
 
-  //    loc = ds.srelgot->contents;
-  //    loc += ds.srelgot->reloc_count * sizeof (Elf32_External_Rela); /* relA */
-  //    ds.srelgot->reloc_count += 1;
+      loc = ds.srelgot->contents;
+      loc += ds.srelgot->reloc_count * sizeof (Elf32_External_Rela); /* relA */
+      ds.srelgot->reloc_count += 1;
 
-  //    bfd_elf32_swap_reloca_out (output_bfd, &rel, loc);
-  //  }
+      bfd_elf32_swap_reloca_out (output_bfd, &rel, loc);
+    }
 
 }
 
@@ -1217,7 +1211,7 @@ relocate_plt_for_entry (bfd *abfd,
 			struct bfd_link_info *info)
 {
   bfd *dynobj = (elf_hash_table (info))->dynobj;
-  struct plt_version_t *plt_data = arc_get_plt_version ();
+  struct plt_version_t *plt_data = arc_get_plt_version (info);
   struct dynamic_sections ds = arc_create_dynamic_sections (dynobj, info);
 
   memcpy (ds.splt->contents, plt_data->entry, plt_data->entry_size);
