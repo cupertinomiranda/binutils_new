@@ -1025,170 +1025,36 @@ elf_arc_check_relocs (bfd * abfd,
 
 #define ELF_DYNAMIC_INTERPRETER  "/sbin/ld-uClibc.so"
 
-/* size of one plt entry in bytes*/
-#define PLT_ENTRY_SIZE	12
-#define PLT_ENTRY_SIZE_V2 16
-
 /* Instructions appear in memory as a sequence of half-words (16 bit);
    individual half-words are represented on the target in target byte order.
    We use 'unsigned short' on the host to represent the PLT templates,
    and translate to target byte order as we copy to the target.  */
 typedef uint16_t insn_hword;
 
-
-// TODO: Make this PLT entry code be in a separate object file.
-// TODO: This is a linker BTW, we should be able to link. :)
-
-/* The zeroth entry in the absolute plt entry */
-static const insn_hword elf_arc_abs_plt0_entry[2 * PLT_ENTRY_SIZE / 2] = {
-  0x1600,	/* ld %r11, [0] */
-  0x700b,
-  0x0000,
-  0x0000,
-  0x1600,	/* ld %r10, [0] */
-  0x700a,	/* */
-  0,
-  0,
-  0x2020,	/* j [%r10] */
-  0x0280,	/* ---"---- */
-  0x0000,	/* pad */
-  0x0000	/* pad */
-};
-
-/* Contents of the subsequent entries in the absolute plt */
-static const insn_hword elf_arc_abs_pltn_entry[PLT_ENTRY_SIZE / 2] = {
-  0x2730,	/* ld %r12, [%pc,func@gotpc] */
-  0x7f8c,	/* ------ " " -------------- */
-  0x0000,	/* ------ " " -------------- */
-  0x0000,	/* ------ " " -------------- */
-  0x7c20,	/* j_s.d [%r12] */
-  0x74ef	/* mov_s %r12, %pcl */
-};
-
-/* The zeroth entry in the absolute plt entry for ARCv2 */
-static const insn_hword elf_arcV2_abs_plt0_entry[2 * PLT_ENTRY_SIZE_V2 / 2] = {
-  0x1600, 0x700b, 0, 0,   /* ld %r11, [0] */
-  0x1600, 0x700a, 0, 0,   /* ld %r10, [0] */
-  0x2020, 0x0280,	  /* j [%r10] */
-  0x0000, 0x0000,	  /* -> RELOCATED TO ABS ADDRESS OF GOT <- */
-  0x0000,		  /* pad */
-  0x0000,		  /* pad */
-  0x0000,		  /* pad */
-  0x0000		  /* pad */
-};
-
-/* Contents of the subsequent entries in the absolute plt for ARCv2 */
-static const insn_hword elf_arcV2_abs_pltn_entry[PLT_ENTRY_SIZE_V2 / 2] = {
-  0x2730,	/* ld %r12, [%pcl,func@gotpc] */
-  0x7f8c,	/* ------ " " -------------- */
-  0x0000,	/* ------ " " -------------- */
-  0x0000,	/* ------ " " -------------- */
-  0x2021,	/* j.d [%r12] */
-  0x0300,	/* ------ " " -------------- */
-  0x240a,	/* mov %r12, %pcl */
-  0x1fc0	/* ------ " " -------------- */
-};
-
-/* The zeroth entry in the pic plt entry */
-static const insn_hword elf_arc_pic_plt0_entry[2 * PLT_ENTRY_SIZE / 2] = {
-  0x2730,	/* ld %r11, [pcl,0] : 0 to be replaced by
-		 * _DYNAMIC@GOTPC+4 */
-  0x7f8b,
-  0x0000,
-  0x0000,
-  0x2730,	/* ld %r10, [pcl,0] : 0 to be replaced by
-		 * -DYNAMIC@GOTPC+8 */
-  0x7f8a,	/* */
-  0,
-  0,
-  0x2020,	/* j [%r10] */
-  0x0280,	/* ---"---- */
-  0x0000,	/* pad */
-  0x0000	/* pad */
-};
-
-/* Contents of the subsequent entries in the pic plt */
-static const insn_hword elf_arc_pic_pltn_entry[PLT_ENTRY_SIZE / 2] = {
-  0x2730,	/* ld %r12, [%pc,func@got] */
-  0x7f8c,	/* ------ " " -------------- */
-  0x0000,	/* ------ " " -------------- */
-  0x0000,	/* ------ " " -------------- */
-  0x7c20,	/* j_s.d [%r12] */
-  0x74ef,	/* mov_s %r12, %pcl */
-};
-
-/* The zeroth entry in the pic plt entry for ARCv2 */
-#define elf_arcV2_pic_PLT0_ENTRY_SIZE (32)
-static const insn_hword elf_arcV2_pic_plt0_entry[elf_arcV2_pic_PLT0_ENTRY_SIZE / 2] = {
-  0x2730,	/* ld %r11, [pcl,0] : 0 to be replaced by
-		 * _DYNAMIC@GOTPC+4 */
-  0x7f8b,
-  0x0000,
-  0x0000,
-  0x2730,	/* ld %r10, [pcl,0] : 0 to be replaced by
-		 * -DYNAMIC@GOTPC+8 */
-  0x7f8a,	/* */
-  0,
-  0,
-  0x2020,	/* j [%r10] */
-  0x0280,	/* ---"---- */
-  0x0000,	/* pad */
-  0x0000,	/* pad */
-  0x0000,	/* pad */
-  0x0000,	/* pad */
-  0x0000,	/* pad */
-  0x0000	/* pad */
-};
-
-
-/* Contents of the subsequent entries in the pic plt for ARCv2*/
-#define elf_arcV2_pic_PLTN_ENTRY_SIZE (16)
-static const insn_hword elf_arcV2_pic_pltn_entry[elf_arcV2_pic_PLTN_ENTRY_SIZE / 2] = {
-  0x2730,	/* ld %r12, [%pc,func@got] */
-  0x7f8c,	/* ------ " " -------------- */
-  0x0000,	/* ------ " " -------------- */
-  0x0000,	/* ------ " " -------------- */
-  0x2021,	/* j.d [%r12] */
-  0x0300,	/* ------ " " -------------- */
-  0x240a,	/* mov %r12, %pcl */
-  0x1fc0	/* ------ " " -------------- */
-};
-
-
-//#define PLT_DATA(NAME, ...) \
-//  .entry = NAME##_plt0_entry, \
-//  .entry_size = NAME##_PLT0_ENTRY_SIZE, \
-//  .elem = NAME##_pltn_entry, \
-//  .elem_size = NAME##_PLTN_ENTRY_SIZE
-//
-//struct plt_version_t plt_versions[] = {
-//  {
-//    PLT_DATA (elf_arcV2_pic),
-//    .entry_relocs = {
-//		  {4, 32, 0xFFFFFFFF, SGOT | RELATIVE | MIDDLE_ENDIAN, 4},
-//		  {12, 32, 0xFFFFFFFF, SGOT | RELATIVE | MIDDLE_ENDIAN, 8},
-//		  {20, 32, 0xFFFFFFFF, SGOT, 0},
-//		  {0, 0, 0, LAST_RELOC, 0}
-//		  },
-//    .elem_relocs = {
-//		 {4, 32, 0xFFFFFFFF, SGOT, 0},
-//		 {0, 0, 0, LAST_RELOC, 0}
-//		 }
-//  }
-//};
-//#undef PLT_DATA
-
 #include "arc-plt.h"
 
 static struct plt_version_t *
-arc_get_plt_version (void)
+arc_get_plt_version (bfd *output_bfd)
 {
   int i;
   for(i = 0; i < 1; i++) {
     printf("%d: size1 = %d, size2 = %d\n", i, plt_versions[i].entry_size, plt_versions[i].elem_size);
   }
 
-  return &(plt_versions[0]);
+  if (bfd_get_mach (output_bfd) == bfd_mach_arc_arcv2) i
+    {
+      if(bfd_link_pic (info))
+        return &(plt_versions[ELF_ARCV2_PIC];
+      else
+        return &(plt_versions[ELF_ARCV2_ABS];
+    }
+  else
+    {
+      if(bfd_link_pic (info))
+        return &(plt_versions[ELF_ARC_PIC];
+      else
+        return &(plt_versions[ELF_ARC_ABS];
+    }
 }
 
 static		bfd_vma
