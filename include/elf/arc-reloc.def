@@ -1,3 +1,9 @@
+ARC_RELOC_HOWTO(ARC_NONE, 0, \
+                2, \
+                32, \
+                replace_none, \
+                bitfield, \
+                0)
 
 ARC_RELOC_HOWTO(ARC_8, 1, \
                 0, \

@@ -1210,9 +1210,9 @@ extern void allocate_gnat_aux_type (struct type *);
 
 #define INIT_FUNC_SPECIFIC(type)					       \
   (TYPE_SPECIFIC_FIELD (type) = TYPE_SPECIFIC_FUNC,			       \
-   TYPE_MAIN_TYPE (type)->type_specific.func_stuff			       \
-     = TYPE_ZALLOC (type,						       \
-		    sizeof (*TYPE_MAIN_TYPE (type)->type_specific.func_stuff)))
+   TYPE_MAIN_TYPE (type)->type_specific.func_stuff = (struct func_type *)      \
+     TYPE_ZALLOC (type,							       \
+		  sizeof (*TYPE_MAIN_TYPE (type)->type_specific.func_stuff)))
 
 #define TYPE_INSTANCE_FLAGS(thistype) (thistype)->instance_flags
 #define TYPE_MAIN_TYPE(thistype) (thistype)->main_type
@@ -1904,13 +1904,15 @@ extern int field_is_static (struct field *);
 
 /* printcmd.c */
 
-extern void print_scalar_formatted (const void *, struct type *,
+extern void print_scalar_formatted (const gdb_byte *, struct type *,
 				    const struct value_print_options *,
 				    int, struct ui_file *);
 
 extern int can_dereference (struct type *);
 
 extern int is_integral_type (struct type *);
+
+extern int is_scalar_type (struct type *type);
 
 extern int is_scalar_type_recursive (struct type *);
 

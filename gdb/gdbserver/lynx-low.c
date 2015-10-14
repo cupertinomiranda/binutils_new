@@ -747,10 +747,7 @@ static struct target_ops lynx_target_ops = {
   NULL,  /* supports_stopped_by_sw_breakpoint */
   NULL,  /* stopped_by_hw_breakpoint */
   NULL,  /* supports_stopped_by_hw_breakpoint */
-  /* Although lynx has hardware single step, still disable this
-     feature for lynx, because it is implemented in linux-low.c instead
-     of in generic code.  */
-  NULL,  /* supports_conditional_breakpoints */
+  target_can_do_hardware_single_step,
   NULL,  /* stopped_by_watchpoint */
   NULL,  /* stopped_data_address */
   NULL,  /* read_offsets */
@@ -765,6 +762,7 @@ static struct target_ops lynx_target_ops = {
   NULL,  /* supports_multi_process */
   NULL,  /* supports_fork_events */
   NULL,  /* supports_vfork_events */
+  NULL,  /* supports_exec_events */
   NULL,  /* handle_new_gdb_connection */
   NULL,  /* handle_monitor_command */
 };

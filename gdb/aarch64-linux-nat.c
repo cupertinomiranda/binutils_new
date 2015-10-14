@@ -460,21 +460,10 @@ ps_err_e
 ps_get_thread_area (const struct ps_prochandle *ph,
 		    lwpid_t lwpid, int idx, void **base)
 {
-  struct iovec iovec;
-  uint64_t reg;
+  int is_64bit_p
+    = (gdbarch_bfd_arch_info (target_gdbarch ())->bits_per_word == 64);
 
-  iovec.iov_base = &reg;
-  iovec.iov_len = sizeof (reg);
-
-  if (ptrace (PTRACE_GETREGSET, lwpid, NT_ARM_TLS, &iovec) != 0)
-    return PS_ERR;
-
-  /* IDX is the bias from the thread pointer to the beginning of the
-     thread descriptor.  It has to be subtracted due to implementation
-     quirks in libthread_db.  */
-  *base = (void *) (reg - idx);
-
-  return PS_OK;
+  return aarch64_ps_get_thread_area (ph, lwpid, idx, base, is_64bit_p);
 }
 
 
@@ -541,6 +530,34 @@ aarch64_linux_read_description (struct target_ops *ops)
     }
 
   return tdesc_aarch64;
+}
+
+/* Convert a native/host siginfo object, into/from the siginfo in the
+   layout of the inferiors' architecture.  Returns true if any
+   conversion was done; false otherwise.  If DIRECTION is 1, then copy
+   from INF to NATIVE.  If DIRECTION is 0, copy from NATIVE to
+   INF.  */
+
+static int
+aarch64_linux_siginfo_fixup (siginfo_t *native, gdb_byte *inf, int direction)
+{
+  struct gdbarch *gdbarch = get_frame_arch (get_current_frame ());
+
+  /* Is the inferior 32-bit?  If so, then do fixup the siginfo
+     object.  */
+  if (gdbarch_bfd_arch_info (gdbarch)->bits_per_word == 32)
+    {
+      if (direction == 0)
+	aarch64_compat_siginfo_from_siginfo ((struct compat_siginfo *) inf,
+					     native);
+      else
+	aarch64_siginfo_from_compat_siginfo (native,
+					     (struct compat_siginfo *) inf);
+
+      return 1;
+    }
+
+  return 0;
 }
 
 /* Returns the number of hardware watchpoints of type TYPE that we can
@@ -779,6 +796,14 @@ aarch64_linux_watchpoint_addr_within_range (struct target_ops *target,
   return start <= addr && start + length - 1 >= addr;
 }
 
+/* Implement the "to_can_do_single_step" target_ops method.  */
+
+static int
+aarch64_linux_can_do_single_step (struct target_ops *target)
+{
+  return 1;
+}
+
 /* Define AArch64 maintenance commands.  */
 
 static void
@@ -830,6 +855,7 @@ _initialize_aarch64_linux_nat (void)
   t->to_stopped_data_address = aarch64_linux_stopped_data_address;
   t->to_watchpoint_addr_within_range =
     aarch64_linux_watchpoint_addr_within_range;
+  t->to_can_do_single_step = aarch64_linux_can_do_single_step;
 
   /* Override the GNU/Linux inferior startup hook.  */
   super_post_startup_inferior = t->to_post_startup_inferior;
@@ -841,4 +867,7 @@ _initialize_aarch64_linux_nat (void)
   linux_nat_set_new_fork (t, aarch64_linux_new_fork);
   linux_nat_set_forget_process (t, aarch64_forget_process);
   linux_nat_set_prepare_to_resume (t, aarch64_linux_prepare_to_resume);
+
+  /* Add our siginfo layout converter.  */
+  linux_nat_set_siginfo_fixup (t, aarch64_linux_siginfo_fixup);
 }

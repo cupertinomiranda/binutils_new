@@ -269,9 +269,9 @@ ioscm_write (SCM port, const void *data, size_t size)
   TRY
     {
       if (scm_is_eq (port, error_port_scm))
-	fputsn_filtered (data, size, gdb_stderr);
+	fputsn_filtered ((const char *) data, size, gdb_stderr);
       else
-	fputsn_filtered (data, size, gdb_stdout);
+	fputsn_filtered ((const char *) data, size, gdb_stdout);
     }
   CATCH (except, RETURN_MASK_ALL)
     {
@@ -326,7 +326,8 @@ ioscm_init_stdio_buffers (SCM port, long mode_bits)
 
   if (!writing && size > 0)
     {
-      pt->read_buf = scm_gc_malloc_pointerless (size, "port buffer");
+      pt->read_buf
+	= (unsigned char *) scm_gc_malloc_pointerless (size, "port buffer");
       pt->read_pos = pt->read_end = pt->read_buf;
       pt->read_buf_size = size;
     }
@@ -338,7 +339,8 @@ ioscm_init_stdio_buffers (SCM port, long mode_bits)
 
   if (writing && size > 0)
     {
-      pt->write_buf = scm_gc_malloc_pointerless (size, "port buffer");
+      pt->write_buf
+	= (unsigned char *) scm_gc_malloc_pointerless (size, "port buffer");
       pt->write_pos = pt->write_buf;
       pt->write_buf_size = size;
     }
@@ -428,7 +430,7 @@ gdbscm_error_port (void)
 static void
 ioscm_file_port_delete (struct ui_file *file)
 {
-  ioscm_file_port *stream = ui_file_data (file);
+  ioscm_file_port *stream = (ioscm_file_port *) ui_file_data (file);
 
   if (stream->magic != &file_port_magic)
     internal_error (__FILE__, __LINE__,
@@ -439,7 +441,7 @@ ioscm_file_port_delete (struct ui_file *file)
 static void
 ioscm_file_port_rewind (struct ui_file *file)
 {
-  ioscm_file_port *stream = ui_file_data (file);
+  ioscm_file_port *stream = (ioscm_file_port *) ui_file_data (file);
 
   if (stream->magic != &file_port_magic)
     internal_error (__FILE__, __LINE__,
@@ -453,7 +455,7 @@ ioscm_file_port_put (struct ui_file *file,
 		     ui_file_put_method_ftype *write,
 		     void *dest)
 {
-  ioscm_file_port *stream = ui_file_data (file);
+  ioscm_file_port *stream = (ioscm_file_port *) ui_file_data (file);
 
   if (stream->magic != &file_port_magic)
     internal_error (__FILE__, __LINE__,
@@ -467,7 +469,7 @@ ioscm_file_port_write (struct ui_file *file,
 		       const char *buffer,
 		       long length_buffer)
 {
-  ioscm_file_port *stream = ui_file_data (file);
+  ioscm_file_port *stream = (ioscm_file_port *) ui_file_data (file);
 
   if (stream->magic != &file_port_magic)
     internal_error (__FILE__, __LINE__,
@@ -1011,8 +1013,8 @@ ioscm_init_memory_port (SCM port, CORE_ADDR start, CORE_ADDR end)
   pt->write_buf_size = iomem->write_buf_size;
   if (buffered)
     {
-      pt->read_buf = xmalloc (pt->read_buf_size);
-      pt->write_buf = xmalloc (pt->write_buf_size);
+      pt->read_buf = (unsigned char *) xmalloc (pt->read_buf_size);
+      pt->write_buf = (unsigned char *) xmalloc (pt->write_buf_size);
     }
   else
     {
@@ -1076,7 +1078,7 @@ ioscm_reinit_memory_port (SCM port, size_t read_buf_size,
       iomem->read_buf_size = read_buf_size;
       pt->read_buf_size = read_buf_size;
       xfree (pt->read_buf);
-      pt->read_buf = xmalloc (pt->read_buf_size);
+      pt->read_buf = (unsigned char *) xmalloc (pt->read_buf_size);
       pt->read_pos = pt->read_end = pt->read_buf;
     }
 
@@ -1085,7 +1087,7 @@ ioscm_reinit_memory_port (SCM port, size_t read_buf_size,
       iomem->write_buf_size = write_buf_size;
       pt->write_buf_size = write_buf_size;
       xfree (pt->write_buf);
-      pt->write_buf = xmalloc (pt->write_buf_size);
+      pt->write_buf = (unsigned char *) xmalloc (pt->write_buf_size);
       pt->write_pos = pt->write_buf;
       pt->write_end = pt->write_buf + pt->write_buf_size;
     }
@@ -1287,44 +1289,44 @@ gdbscm_set_memory_port_write_buffer_size_x (SCM port, SCM size)
 
 static const scheme_function port_functions[] =
 {
-  { "input-port", 0, 0, 0, gdbscm_input_port,
+  { "input-port", 0, 0, 0, as_a_scm_t_subr (gdbscm_input_port),
     "\
 Return gdb's input port." },
 
-  { "output-port", 0, 0, 0, gdbscm_output_port,
+  { "output-port", 0, 0, 0, as_a_scm_t_subr (gdbscm_output_port),
     "\
 Return gdb's output port." },
 
-  { "error-port", 0, 0, 0, gdbscm_error_port,
+  { "error-port", 0, 0, 0, as_a_scm_t_subr (gdbscm_error_port),
     "\
 Return gdb's error port." },
 
-  { "stdio-port?", 1, 0, 0, gdbscm_stdio_port_p,
+  { "stdio-port?", 1, 0, 0, as_a_scm_t_subr (gdbscm_stdio_port_p),
     "\
 Return #t if the object is a gdb:stdio-port." },
 
-  { "open-memory", 0, 0, 1, gdbscm_open_memory,
+  { "open-memory", 0, 0, 1, as_a_scm_t_subr (gdbscm_open_memory),
     "\
 Return a port that can be used for reading/writing inferior memory.\n\
 \n\
   Arguments: [#:mode string] [#:start address] [#:size integer]\n\
   Returns: A port object." },
 
-  { "memory-port?", 1, 0, 0, gdbscm_memory_port_p,
+  { "memory-port?", 1, 0, 0, as_a_scm_t_subr (gdbscm_memory_port_p),
     "\
 Return #t if the object is a memory port." },
 
-  { "memory-port-range", 1, 0, 0, gdbscm_memory_port_range,
+  { "memory-port-range", 1, 0, 0, as_a_scm_t_subr (gdbscm_memory_port_range),
     "\
 Return the memory range of the port as (start end)." },
 
   { "memory-port-read-buffer-size", 1, 0, 0,
-    gdbscm_memory_port_read_buffer_size,
+    as_a_scm_t_subr (gdbscm_memory_port_read_buffer_size),
     "\
 Return the size of the read buffer for the memory port." },
 
   { "set-memory-port-read-buffer-size!", 2, 0, 0,
-    gdbscm_set_memory_port_read_buffer_size_x,
+    as_a_scm_t_subr (gdbscm_set_memory_port_read_buffer_size_x),
     "\
 Set the size of the read buffer for the memory port.\n\
 \n\
@@ -1332,12 +1334,12 @@ Set the size of the read buffer for the memory port.\n\
   Returns: unspecified." },
 
   { "memory-port-write-buffer-size", 1, 0, 0,
-    gdbscm_memory_port_write_buffer_size,
+    as_a_scm_t_subr (gdbscm_memory_port_write_buffer_size),
     "\
 Return the size of the write buffer for the memory port." },
 
   { "set-memory-port-write-buffer-size!", 2, 0, 0,
-    gdbscm_set_memory_port_write_buffer_size_x,
+    as_a_scm_t_subr (gdbscm_set_memory_port_write_buffer_size_x),
     "\
 Set the size of the write buffer for the memory port.\n\
 \n\
@@ -1351,7 +1353,7 @@ static const scheme_function private_port_functions[] =
 {
 #if 0 /* TODO */
   { "%with-gdb-input-from-port", 2, 0, 0,
-    gdbscm_percent_with_gdb_input_from_port,
+    as_a_scm_t_subr (gdbscm_percent_with_gdb_input_from_port),
     "\
 Temporarily set GDB's input port to PORT and then invoke THUNK.\n\
 \n\
@@ -1362,7 +1364,7 @@ This procedure is experimental." },
 #endif
 
   { "%with-gdb-output-to-port", 2, 0, 0,
-    gdbscm_percent_with_gdb_output_to_port,
+    as_a_scm_t_subr (gdbscm_percent_with_gdb_output_to_port),
     "\
 Temporarily set GDB's output port to PORT and then invoke THUNK.\n\
 \n\
@@ -1372,7 +1374,7 @@ Temporarily set GDB's output port to PORT and then invoke THUNK.\n\
 This procedure is experimental." },
 
   { "%with-gdb-error-to-port", 2, 0, 0,
-    gdbscm_percent_with_gdb_error_to_port,
+    as_a_scm_t_subr (gdbscm_percent_with_gdb_error_to_port),
     "\
 Temporarily set GDB's error port to PORT and then invoke THUNK.\n\
 \n\

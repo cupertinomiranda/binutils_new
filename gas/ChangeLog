@@ -1,3 +1,127 @@
+2015-10-12  Nick Clifton  <nickc@redhat.com>
+
+	* config/tc-msp430.c (msp430_mcu_names): Rename to
+	msp430_mcu_data.  Add fields for the ISA and hardware multiply
+	support.  Update with information from the latest devices.csv
+	file.
+	(md_parse_option): Make use of the new array.
+
+2015-10-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* config/tc-avr.c (avr_output_property_record): Fix overwrite bug
+	for align and fill records.
+	(avr_handle_align): Record fill information for align frags.
+	(create_record_for_frag): Add next frag assertion, use correct
+	address for align records.
+
+2015-10-10  Alan Modra  <amodra@gmail.com>
+
+	PR gas/19113
+	* read.c (next_char_of_string): Mask char after escape.  Use
+	CHAR_MASK rather than 0xff.
+
+2015-10-07  Yao Qi  <yao.qi@linaro.org>
+
+	* config/tc-aarch64.c (md_begin): Access field 'name' rather
+	than 'template'.
+
+2015-10-07  Claudiu Zissulescu  <claziss@synopsys.com>
+
+        * config/tc-arc.c: Revamped file for ARC support.
+        * config/tc-arc.h: Likewise.
+        * doc/as.texinfo: Add new ARC options.
+        * doc/c-arc.texi: Likewise.
+
+2015-10-02  Renlin Li <renlin.li@arm.com>
+
+	* config/tc-aarch64.c (s_tlsdescadd): New.
+	(s_tlsdescldr): New.
+	(md_pseudo_table): Handle tlsdescadd and tlsdescldr pseudo ops.
+	(reloc_table): Add entries for BFD_RELOC_AARCH64_TLSDESC_OFF_G0_NC and
+	BFD_RELOC_AARCH64_TLSDESC_OFF_G0_NC.
+	(process_movw_reloc_info): Support AARCH64_TLSDESC_OFF_G1 and
+	AARCH64_TLSDESC_OFF_G0_NC.
+	(md_apply_fix): Likewise.
+	(aarch64_force_relocation): Likewise.
+
+2015-10-02  Renlin Li <renlin.li@arm.com>
+
+	* config/tc-aarch64.c (reloc_table): Add two entries for
+	gottprel_g0_nc and gottprel_g1.
+	(process_movw_reloc_info): Add support.
+	(md_apply_fix): Likewise.
+	(aarch64_force_relocation): Likewise.
+
+2015-10-02  Renlin Li <renlin.li@arm.com>
+
+	* config/tc-aarch64.c (reloc_table): New relocation modifier tlsgd_g0_nc.
+	(process_movw_reloc_info): Support BFD_RELOC_AARCH64_TLSGD_MOVW_G1.
+	(md_apply_fix): Likewise.
+	(aarch64_force_relocation): Likewise.
+
+2015-10-02  Renlin Li <renlin.li@arm.com>
+
+	* config/tc-aarch64.c (reloc_table): New relocation modifier tlsgd_g1.
+	(process_movw_reloc_info): Support BFD_RELOC_AARCH64_TLSGD_MOVW_G1.
+	(md_apply_fix): Likewise.
+	(aarch64_force_relocation): Likewise.
+
+2015-10-02  Renlin Li <renlin.li@arm.com>
+
+	* config/tc-aarch64.c (reloc_table): New relocation modifier
+	gotoff_g0_nc.
+	(process_movw_reloc_info): Support gotoff_g0_nc.
+	(md_apply_fix): Likewise.
+
+2015-10-02  Renlin Li  <renlin.li@arm.com>
+
+	* config/tc-aarch64.c (reloc_table): New relocation modifier
+	gotoff_g1.
+	(process_movw_reloc_info): Support newly added modifier.
+	(md_apply_fix): Likewise.
+
+2015-09-29  Dominik Vogt  <vogt@linux.vnet.ibm.com>
+
+	* doc/c-s390.texi: Add documentation.
+	Add missing code markup.
+	* config/tc-s390.c (current_flags): New static variable.
+	(s390_parse_cpu): Parse cpu flags a la "+nohtm" etc.
+	(s390_setup_opcodes): Use cpu flags to determine the set of opcodes.
+	Fix indentation.
+	(md_parse_option): Call s390_parse_cpu with the new signature.
+	(s390_machine): Likewise.
+	Keep track of current_flags.
+	Simplify code a bit.
+	undefine MAX_HISTORY at end of function.
+	(s390_machinemode): undefine MAX_HISTORY at end of function.
+	Update an error message.
+
+2015-08-11  Peter Zotov  <whitequark@whitequark.org>
+
+	PR ld/18759
+	* config/tc-or1k.c (tc_gen_reloc): Correct computation of PC
+	relative relocs.
+	* config/tc-or1k.h (GAS_CGEN_PRCEL_R_TYPE): Delete.
+
+2015-09-25  Ryo ONODERA  <ryo_on@yk.rim.or.jp>
+
+	PR 18994
+	* configure.ac (nds32): Don't use bash == in tests.
+	* configure: Regenerate.
+
+2015-09-23  Nick Clifton  <nickc@redhat.com>
+
+	* config/tc-ppc.c (insn_validate): Cast PPC_OPSHIFT_INV to an int.
+
+2015-09-22  Nick Clifton  <nickc@redhat.com>
+
+	* config/tc-rx.c (nop_7): Recode using MAX.
+
+2015-09-05  Chen Gang  <gang.chen.5i5j@gmail.com>
+
+	* config/tc-avr.c (md_section_align): Append UL for -1 to avoid
+	the latest gcc's warning.
+
 2015-08-27  Alan Modra  <amodra@gmail.com>
 
 	PR gas/18581

@@ -306,7 +306,8 @@ struct msp430_get_opcode_byte_handle
 static int
 msp430_get_opcode_byte (void *handle)
 {
-  struct msp430_get_opcode_byte_handle *opcdata = handle;
+  struct msp430_get_opcode_byte_handle *opcdata
+    = (struct msp430_get_opcode_byte_handle *) handle;
   int status;
   gdb_byte byte;
 
@@ -502,10 +503,11 @@ msp430_analyze_frame_prologue (struct frame_info *this_frame,
 	stop_addr = func_start;
 
       msp430_analyze_prologue (get_frame_arch (this_frame), func_start,
-			       stop_addr, *this_prologue_cache);
+			       stop_addr,
+			       (struct msp430_prologue *) *this_prologue_cache);
     }
 
-  return *this_prologue_cache;
+  return (struct msp430_prologue *) *this_prologue_cache;
 }
 
 /* Given a frame and a prologue cache, return this frame's base.  */
@@ -770,10 +772,16 @@ msp430_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		  int size = 2;
 
 		  if (code_model == MSP_LARGE_CODE_MODEL
-		      && TYPE_CODE (arg_type) == TYPE_CODE_PTR)
+		      && (TYPE_CODE (arg_type) == TYPE_CODE_PTR
+		          || TYPE_CODE (arg_type) == TYPE_CODE_REF
+			  || TYPE_CODE (arg_type) == TYPE_CODE_STRUCT
+			  || TYPE_CODE (arg_type) == TYPE_CODE_UNION))
 		    {
-		      /* Pointer arguments using large memory model are passed
-		         using entire register.  */
+		      /* When using the large memory model, pointer,
+			 reference, struct, and union arguments are
+			 passed using the entire register.  (As noted
+			 earlier, aggregates are always passed by
+			 reference.) */
 		      if (offset != 0)
 			continue;
 		      size = 4;

@@ -59,9 +59,15 @@ int run_once;
 int multi_process;
 int report_fork_events;
 int report_vfork_events;
+int report_exec_events;
 int non_stop;
 int swbreak_feature;
 int hwbreak_feature;
+
+/* True if the "vContSupported" feature is active.  In that case, GDB
+   wants us to report whether single step is supported in the reply to
+   "vCont?" packet.  */
+static int vCont_supported;
 
 /* Whether we should attempt to disable the operating system's address
    space randomization feature before starting an inferior.  */
@@ -953,7 +959,7 @@ handle_search_memory (char *own_buf, int packet_len)
   CORE_ADDR found_addr;
   int cmd_name_len = sizeof ("qSearch:memory:") - 1;
 
-  pattern = malloc (packet_len);
+  pattern = (gdb_byte *) malloc (packet_len);
   if (pattern == NULL)
     {
       error ("Unable to allocate memory to perform the search");
@@ -977,7 +983,7 @@ handle_search_memory (char *own_buf, int packet_len)
   if (search_space_len < search_buf_size)
     search_buf_size = search_space_len;
 
-  search_buf = malloc (search_buf_size);
+  search_buf = (gdb_byte *) malloc (search_buf_size);
   if (search_buf == NULL)
     {
       free (pattern);
@@ -1205,7 +1211,7 @@ handle_qxfer_exec_file (const char *const_annex,
     }
   else
     {
-      char *annex = alloca (strlen (const_annex) + 1);
+      char *annex = (char *) alloca (strlen (const_annex) + 1);
 
       strcpy (annex, const_annex);
       annex = unpack_varlen_hex (annex, &pid);
@@ -1274,7 +1280,7 @@ static void
 accumulate_file_name_length (struct inferior_list_entry *inf, void *arg)
 {
   struct dll_info *dll = (struct dll_info *) inf;
-  unsigned int *total_len = arg;
+  unsigned int *total_len = (unsigned int *) arg;
 
   /* Over-estimate the necessary memory.  Assume that every character
      in the library name must be escaped.  */
@@ -1288,7 +1294,7 @@ static void
 emit_dll_description (struct inferior_list_entry *inf, void *arg)
 {
   struct dll_info *dll = (struct dll_info *) inf;
-  char **p_ptr = arg;
+  char **p_ptr = (char **) arg;
   char *p = *p_ptr;
   char *name;
 
@@ -1328,7 +1334,7 @@ handle_qxfer_libraries (const char *annex,
   for_each_inferior_with_data (&all_dlls, accumulate_file_name_length,
 			       &total_len);
 
-  document = malloc (total_len);
+  document = (char *) malloc (total_len);
   if (document == NULL)
     return -1;
 
@@ -1444,7 +1450,7 @@ static void
 handle_qxfer_threads_worker (struct inferior_list_entry *inf, void *arg)
 {
   struct thread_info *thread = (struct thread_info *) inf;
-  struct buffer *buffer = arg;
+  struct buffer *buffer = (struct buffer *) arg;
   ptid_t ptid = thread_to_gdb_id (thread);
   char ptid_s[100];
   int core = target_core_of_thread (ptid);
@@ -1789,7 +1795,7 @@ handle_qxfer (char *own_buf, int packet_len, int *new_packet_len_p)
 		 more.  */
 	      if (len > PBUFSIZ - 2)
 		len = PBUFSIZ - 2;
-	      data = malloc (len + 1);
+	      data = (unsigned char *) malloc (len + 1);
 	      if (data == NULL)
 		{
 		  write_enn (own_buf);
@@ -1823,7 +1829,7 @@ handle_qxfer (char *own_buf, int packet_len, int *new_packet_len_p)
 	      unsigned char *data;
 
 	      strcpy (own_buf, "E00");
-	      data = malloc (packet_len - (offset - own_buf));
+	      data = (unsigned char *) malloc (packet_len - (offset - own_buf));
 	      if (data == NULL)
 		{
 		  write_enn (own_buf);
@@ -2065,7 +2071,7 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 	       p = strtok (NULL, ";"))
 	    {
 	      count++;
-	      qsupported = xrealloc (qsupported, count * sizeof (char *));
+	      qsupported = XRESIZEVEC (char *, qsupported, count);
 	      qsupported[count - 1] = xstrdup (p);
 	    }
 
@@ -2111,6 +2117,14 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 		  if (target_supports_vfork_events ())
 		    report_vfork_events = 1;
 		}
+	      else if (strcmp (p, "exec-events+") == 0)
+		{
+		  /* GDB supports and wants exec events if possible.  */
+		  if (target_supports_exec_events ())
+		    report_exec_events = 1;
+		}
+	      else if (strcmp (p, "vContSupported+") == 0)
+		vCont_supported = 1;
 	      else
 		target_process_qsupported (p);
 
@@ -2167,6 +2181,9 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
       if (target_supports_vfork_events ())
 	strcat (own_buf, ";vfork-events+");
 
+      if (target_supports_exec_events ())
+	strcat (own_buf, ";exec-events+");
+
       if (target_supports_non_stop ())
 	strcat (own_buf, ";QNonStop+");
 
@@ -2192,9 +2209,15 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 	  strcat (own_buf, ";tracenz+");
 	}
 
-      /* Support target-side breakpoint conditions and commands.  */
-      if (target_supports_conditional_breakpoints ())
-	strcat (own_buf, ";ConditionalBreakpoints+");
+      if (target_supports_hardware_single_step ())
+	{
+	  /* Support target-side breakpoint conditions and commands.
+	     GDBserver needs to step over the breakpoint if the condition
+	     is false.  GDBserver software single step is too simple, so
+	     disable conditional breakpoints if the target doesn't have
+	     hardware single step.  */
+	  strcat (own_buf, ";ConditionalBreakpoints+");
+	}
       strcat (own_buf, ";BreakpointCommands+");
 
       if (target_supports_agent ())
@@ -2210,6 +2233,8 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 
       if (the_target->pid_to_exec_file != NULL)
 	strcat (own_buf, ";qXfer:exec-file:read+");
+
+      strcat (own_buf, ";vContSupported+");
 
       /* Reinitialize components as needed for the new connection.  */
       hostio_handle_new_gdb_connection ();
@@ -2309,7 +2334,7 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
   /* Handle "monitor" commands.  */
   if (startswith (own_buf, "qRcmd,"))
     {
-      char *mon = malloc (PBUFSIZ);
+      char *mon = (char *) malloc (PBUFSIZ);
       int len = strlen (own_buf + 6);
 
       if (mon == NULL)
@@ -2434,7 +2459,8 @@ struct visit_actioned_threads_data
 static int
 visit_actioned_threads (struct inferior_list_entry *entry, void *datap)
 {
-  struct visit_actioned_threads_data *data = datap;
+  struct visit_actioned_threads_data *data
+    = (struct visit_actioned_threads_data *) datap;
   const struct thread_resume *actions = data->actions;
   size_t num_actions = data->num_actions;
   visit_actioned_threads_callback_ftype *callback = data->callback;
@@ -2498,7 +2524,7 @@ handle_v_cont (char *own_buf)
       p = strchr (p, ';');
     }
 
-  resume_info = malloc (n * sizeof (resume_info[0]));
+  resume_info = (struct thread_resume *) malloc (n * sizeof (resume_info[0]));
   if (resume_info == NULL)
     goto err;
 
@@ -2693,7 +2719,7 @@ handle_v_run (char *own_buf)
       new_argc++;
     }
 
-  new_argv = calloc (new_argc + 2, sizeof (char *));
+  new_argv = (char **) calloc (new_argc + 2, sizeof (char *));
   if (new_argv == NULL)
     {
       write_enn (own_buf);
@@ -2712,7 +2738,7 @@ handle_v_run (char *own_buf)
       else
 	{
 	  /* FIXME: Fail request if out of memory instead of dying.  */
-	  new_argv[i] = xmalloc (1 + (next_p - p) / 2);
+	  new_argv[i] = (char *) xmalloc (1 + (next_p - p) / 2);
 	  hex2bin (p, (gdb_byte *) new_argv[i], (next_p - p) / 2);
 	  new_argv[i][(next_p - p) / 2] = '\0';
 	}
@@ -2809,7 +2835,18 @@ handle_v_requests (char *own_buf, int packet_len, int *new_packet_len)
 
       if (startswith (own_buf, "vCont?"))
 	{
-	  strcpy (own_buf, "vCont;c;C;s;S;t");
+	  strcpy (own_buf, "vCont;c;C;t");
+
+	  if (target_supports_hardware_single_step () || !vCont_supported)
+	    {
+	      /* If target supports hardware single step, add actions s
+		 and S to the list of supported actions.  On the other
+		 hand, if GDB doesn't request the supported vCont actions
+		 in qSupported packet, add s and S to the list too.  */
+	      own_buf = own_buf + strlen (own_buf);
+	      strcpy (own_buf, ";s;S");
+	    }
+
 	  if (target_supports_range_stepping ())
 	    {
 	      own_buf = own_buf + strlen (own_buf);
@@ -3488,15 +3525,15 @@ captured_main (int argc, char *argv[])
     initialize_tracepoint ();
   initialize_notif ();
 
-  own_buf = xmalloc (PBUFSIZ + 1);
-  mem_buf = xmalloc (PBUFSIZ);
+  own_buf = (char *) xmalloc (PBUFSIZ + 1);
+  mem_buf = (unsigned char *) xmalloc (PBUFSIZ);
 
   if (pid == 0 && *next_arg != NULL)
     {
       int i, n;
 
       n = argc - (next_arg - argv);
-      program_argv = xmalloc (sizeof (char *) * (n + 1));
+      program_argv = XNEWVEC (char *, n + 1);
       for (i = 0; i < n; i++)
 	program_argv[i] = xstrdup (next_arg[i]);
       program_argv[i] = NULL;
@@ -3544,11 +3581,13 @@ captured_main (int argc, char *argv[])
       multi_process = 0;
       report_fork_events = 0;
       report_vfork_events = 0;
+      report_exec_events = 0;
       /* Be sure we're out of tfind mode.  */
       current_traceframe = -1;
       cont_thread = null_ptid;
       swbreak_feature = 0;
       hwbreak_feature = 0;
+      vCont_supported = 0;
 
       remote_open (port);
 

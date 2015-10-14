@@ -1,10 +1,14 @@
 -*- text -*-
 
+* Add support for the ARC EM/HS, and ARC600/700 architectures.
+
 * Extend objcopy --compress-debug-sections option to support
   --compress-debug-sections=[none|zlib|zlib-gnu|zlib-gabi] for ELF
   targets.
 
 * Add --update-section option to objcopy.
+
+* Add --output-separator option to strings.
 
 Changes in 2.25:
 

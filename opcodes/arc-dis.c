@@ -29,11 +29,10 @@
 #include "arc-ext.h"
 
 
-/**************************************************************************/
-/* Globals								  */
-/**************************************************************************/
+/* Globals variables.  */
 
-static const char * const regnames[64] = {
+static const char * const regnames[64] =
+{
   "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
   "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",
   "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23",
@@ -45,9 +44,7 @@ static const char * const regnames[64] = {
   "r56", "r57", "ACCL", "ACCH", "lp_count", "rezerved", "LIMM", "pcl"
 };
 
-/**************************************************************************/
-/* Macros								  */
-/**************************************************************************/
+/* Macros section.  */
 
 #ifdef DEBUG
 # define pr_debug(fmt, args...) fprintf (stderr, fmt, ##args)
@@ -68,9 +65,7 @@ static const char * const regnames[64] = {
 
 #define OPCODE_AC(word)   (BITS ((word), 11, 15))
 
-/**************************************************************************/
-/* Functions implementation						  */
-/**************************************************************************/
+/* Functions implementation.  */
 
 static bfd_vma
 bfd_getm32 (unsigned int data)
@@ -123,10 +118,16 @@ print_insn_arc (bfd_vma memaddr,
   int status;
   unsigned int i;
   int insnLen = 0;
-  unsigned insn[2], isa_mask;
+  unsigned insn[2] = { 0, 0 };
+  unsigned isa_mask;
   const unsigned char *opidx;
   const unsigned char *flgidx;
   const struct arc_opcode *opcode;
+  const char *instrName;
+  int flags;
+  bfd_boolean need_comma;
+  bfd_boolean open_braket;
+
 
   lowbyte  = ((info->endian == BFD_ENDIAN_LITTLE) ? 1 : 0);
   highbyte = ((info->endian == BFD_ENDIAN_LITTLE) ? 0 : 1);
@@ -195,11 +196,6 @@ print_insn_arc (bfd_vma memaddr,
       insn[0] = ARRANGE_ENDIAN (info, buffer);
     }
 
-  /* Always read second word in case of limm we ignore the result
-     since last insn may not have a limm.  */
-  status = (*info->read_memory_func) (memaddr + insnLen, buffer, 4, info);
-  insn[1] = ARRANGE_ENDIAN (info, buffer);
-
   /* This variable may be set by the instruction decoder.  It suggests
      the number of bytes objdump should display on a single line.  If
      the instruction decoder sets this, it should always set it to
@@ -228,6 +224,8 @@ print_insn_arc (bfd_vma memaddr,
   /* Find the first match in the opcode table.  */
   for (i = 0; i < arc_num_opcodes; i++)
     {
+      bfd_boolean invalid = FALSE;
+
       opcode = &arc_opcodes[i];
 
       if (ARC_SHORT (opcode->mask) && (insnLen == 2))
@@ -249,7 +247,6 @@ print_insn_arc (bfd_vma memaddr,
       if (!(opcode->cpu & isa_mask))
 	continue;
 
-      int invalid = 0;
       /* Possible candidate, check the operands.  */
       for (opidx = opcode->operands; *opidx; opidx++)
 	{
@@ -272,11 +269,12 @@ print_insn_arc (bfd_vma memaddr,
 	      if ((value == 0x3E && insnLen == 4)
 		  || (value == 0x1E && insnLen == 2))
 		{
-		  invalid = 1;
+		  invalid = TRUE;
 		  break;
 		}
 	    }
 	}
+
       /* Check the flags.  */
       for (flgidx = opcode->flags; *flgidx; flgidx++)
 	{
@@ -298,7 +296,7 @@ print_insn_arc (bfd_vma memaddr,
 	    }
 	  if (!foundA && foundB)
 	    {
-	      invalid = 1;
+	      invalid = TRUE;
 	      break;
 	    }
 	}
@@ -311,10 +309,7 @@ print_insn_arc (bfd_vma memaddr,
     }
 
   /* No instruction found.  Try the extenssions.  */
-  const char *instrName = "";
-  int flags;
-  instrName = arcExtMap_instName (OPCODE (insn[0]), insn[0],
-				  &flags);
+  instrName = arcExtMap_instName (OPCODE (insn[0]), insn[0], &flags);
   if (instrName)
     {
       opcode = &arc_opcodes[0];
@@ -405,9 +400,10 @@ print_insn_arc (bfd_vma memaddr,
   if (opcode->operands[0] != 0)
     (*info->fprintf_func) (info->stream, "\t");
 
+  need_comma = FALSE;
+  open_braket = FALSE;
+
   /* Now extract and print the operands.  */
-  int need_comma = 0;
-  int open_braket = 0;
   for (opidx = opcode->operands; *opidx; opidx++)
     {
       const struct arc_operand *operand = &arc_operands[*opidx];
@@ -416,12 +412,13 @@ print_insn_arc (bfd_vma memaddr,
       if (open_braket && (operand->flags & ARC_OPERAND_BRAKET))
 	{
 	  (*info->fprintf_func) (info->stream, "]");
-	  open_braket = 0;
+	  open_braket = FALSE;
 	  continue;
 	}
 
       /* Only take input from real operands.  */
-      if ((operand->flags & ARC_OPERAND_FAKE) && !(operand->flags & ARC_OPERAND_BRAKET))
+      if ((operand->flags & ARC_OPERAND_FAKE)
+	  && !(operand->flags & ARC_OPERAND_BRAKET))
 	continue;
 
       if (operand->extract)
@@ -430,7 +427,8 @@ print_insn_arc (bfd_vma memaddr,
 	{
 	  if (operand->flags & ARC_OPERAND_ALIGNED32)
 	    {
-	      value = (insn[0] >> operand->shift) & ((1 << (operand->bits - 2)) - 1);
+	      value = (insn[0] >> operand->shift)
+		& ((1 << (operand->bits - 2)) - 1);
 	      value = value << 2;
 	    }
 	  else
@@ -455,12 +453,26 @@ print_insn_arc (bfd_vma memaddr,
       if (!open_braket && (operand->flags & ARC_OPERAND_BRAKET))
 	{
 	  (*info->fprintf_func) (info->stream, "[");
-	  open_braket = 1;
-	  need_comma = 0;
+	  open_braket = TRUE;
+	  need_comma = FALSE;
 	  continue;
 	}
 
-    /* Print the operand as directed by the flags.  */
+      /* Read the limm operand, if required.  */
+      if (operand->flags & ARC_OPERAND_LIMM
+	  && !(operand->flags & ARC_OPERAND_DUPLICATE))
+	{
+	  status = (*info->read_memory_func) (memaddr + insnLen, buffer,
+					      4, info);
+	  if (status != 0)
+	    {
+	      (*info->memory_error_func) (status, memaddr + insnLen, info);
+	      return -1;
+	    }
+	  insn[1] = ARRANGE_ENDIAN (info, buffer);
+	}
+
+      /* Print the operand as directed by the flags.  */
       if (operand->flags & ARC_OPERAND_IR)
 	{
 	  assert (value >=0 && value < 64);
@@ -496,7 +508,7 @@ print_insn_arc (bfd_vma memaddr,
 	else
 	  (*info->fprintf_func) (info->stream, "%#x", value);
 
-      need_comma = 1;
+      need_comma = TRUE;
 
       /* Adjust insn len.  */
       if (operand->flags & ARC_OPERAND_LIMM

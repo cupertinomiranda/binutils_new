@@ -3523,9 +3523,7 @@ pc-relative or some form of GOT-indirect relocation.  */
   BFD_RELOC_ARM_THUMB_IMM,
   BFD_RELOC_ARM_THUMB_SHIFT,
 
-/* Renesas / SuperH SH relocs.  Not all of these appear in object files.
-
---MARKER_ARC_RELOCS_BEGIN--  */
+/* Renesas / SuperH SH relocs.  Not all of these appear in object files.  */
   BFD_RELOC_SH_PCDISP8BY2,
   BFD_RELOC_SH_PCDISP12BY2,
   BFD_RELOC_SH_IMM3,
@@ -3624,197 +3622,71 @@ pc-relative or some form of GOT-indirect relocation.  */
   BFD_RELOC_SH_GOTOFFFUNCDESC20,
   BFD_RELOC_SH_FUNCDESC,
 
-/* BFD_RELOC_ARC_8 Arc relocation.  */
+/* ARC relocs.  */
+  BFD_RELOC_ARC_NONE,
   BFD_RELOC_ARC_8,
-
-/* BFD_RELOC_ARC_16 Arc relocation.  */
   BFD_RELOC_ARC_16,
-
-/* BFD_RELOC_ARC_24 Arc relocation.  */
   BFD_RELOC_ARC_24,
-
-/* BFD_RELOC_ARC_32 Arc relocation.  */
   BFD_RELOC_ARC_32,
-
-/* BFD_RELOC_ARC_N8 Arc relocation.  */
   BFD_RELOC_ARC_N8,
-
-/* BFD_RELOC_ARC_N16 Arc relocation.  */
   BFD_RELOC_ARC_N16,
-
-/* BFD_RELOC_ARC_N24 Arc relocation.  */
   BFD_RELOC_ARC_N24,
-
-/* BFD_RELOC_ARC_N32 Arc relocation.  */
   BFD_RELOC_ARC_N32,
-
-/* BFD_RELOC_ARC_SDA Arc relocation.  */
   BFD_RELOC_ARC_SDA,
-
-/* BFD_RELOC_ARC_SECTOFF Arc relocation.  */
   BFD_RELOC_ARC_SECTOFF,
-
-/* BFD_RELOC_ARC_S21H_PCREL Arc relocation.  */
   BFD_RELOC_ARC_S21H_PCREL,
-
-/* BFD_RELOC_ARC_S21W_PCREL Arc relocation.  */
   BFD_RELOC_ARC_S21W_PCREL,
-
-/* BFD_RELOC_ARC_S25H_PCREL Arc relocation.  */
   BFD_RELOC_ARC_S25H_PCREL,
-
-/* BFD_RELOC_ARC_S25W_PCREL Arc relocation.  */
   BFD_RELOC_ARC_S25W_PCREL,
-
-/* BFD_RELOC_ARC_SDA32 Arc relocation.  */
   BFD_RELOC_ARC_SDA32,
-
-/* BFD_RELOC_ARC_SDA_LDST Arc relocation.  */
   BFD_RELOC_ARC_SDA_LDST,
-
-/* BFD_RELOC_ARC_SDA_LDST1 Arc relocation.  */
   BFD_RELOC_ARC_SDA_LDST1,
-
-/* BFD_RELOC_ARC_SDA_LDST2 Arc relocation.  */
   BFD_RELOC_ARC_SDA_LDST2,
-
-/* BFD_RELOC_ARC_SDA16_LD Arc relocation.  */
   BFD_RELOC_ARC_SDA16_LD,
-
-/* BFD_RELOC_ARC_SDA16_LD1 Arc relocation.  */
   BFD_RELOC_ARC_SDA16_LD1,
-
-/* BFD_RELOC_ARC_SDA16_LD2 Arc relocation.  */
   BFD_RELOC_ARC_SDA16_LD2,
-
-/* BFD_RELOC_ARC_S13_PCREL Arc relocation.  */
   BFD_RELOC_ARC_S13_PCREL,
-
-/* BFD_RELOC_ARC_W Arc relocation.  */
   BFD_RELOC_ARC_W,
-
-/* BFD_RELOC_ARC_32_ME Arc relocation.  */
   BFD_RELOC_ARC_32_ME,
-
-/* BFD_RELOC_ARC_32_ME_S Arc relocation.  */
   BFD_RELOC_ARC_32_ME_S,
-
-/* BFD_RELOC_ARC_N32_ME Arc relocation.  */
   BFD_RELOC_ARC_N32_ME,
-
-/* BFD_RELOC_ARC_SECTOFF_ME Arc relocation.  */
   BFD_RELOC_ARC_SECTOFF_ME,
-
-/* BFD_RELOC_ARC_SDA32_ME Arc relocation.  */
   BFD_RELOC_ARC_SDA32_ME,
-
-/* BFD_RELOC_ARC_W_ME Arc relocation.  */
   BFD_RELOC_ARC_W_ME,
-
-/* BFD_RELOC_AC_SECTOFF_U8 Arc relocation.  */
   BFD_RELOC_AC_SECTOFF_U8,
-
-/* BFD_RELOC_AC_SECTOFF_U8_1 Arc relocation.  */
   BFD_RELOC_AC_SECTOFF_U8_1,
-
-/* BFD_RELOC_AC_SECTOFF_U8_2 Arc relocation.  */
   BFD_RELOC_AC_SECTOFF_U8_2,
-
-/* BFD_RELOC_AC_SECTFOFF_S9 Arc relocation.  */
   BFD_RELOC_AC_SECTFOFF_S9,
-
-/* BFD_RELOC_AC_SECTFOFF_S9_1 Arc relocation.  */
   BFD_RELOC_AC_SECTFOFF_S9_1,
-
-/* BFD_RELOC_AC_SECTFOFF_S9_2 Arc relocation.  */
   BFD_RELOC_AC_SECTFOFF_S9_2,
-
-/* BFD_RELOC_ARC_SECTOFF_ME_1 Arc relocation.  */
   BFD_RELOC_ARC_SECTOFF_ME_1,
-
-/* BFD_RELOC_ARC_SECTOFF_ME_2 Arc relocation.  */
   BFD_RELOC_ARC_SECTOFF_ME_2,
-
-/* BFD_RELOC_ARC_SECTOFF_1 Arc relocation.  */
   BFD_RELOC_ARC_SECTOFF_1,
-
-/* BFD_RELOC_ARC_SECTOFF_2 Arc relocation.  */
   BFD_RELOC_ARC_SECTOFF_2,
-
-/* BFD_RELOC_ARC_SDA16_ST2 Arc relocation.  */
   BFD_RELOC_ARC_SDA16_ST2,
-
-/* BFD_RELOC_ARC_PC32 Arc relocation.  */
   BFD_RELOC_ARC_PC32,
-
-/* BFD_RELOC_ARC_GOT32 Arc relocation.  */
   BFD_RELOC_ARC_GOT32,
-
-/* BFD_RELOC_ARC_GOTPC32 Arc relocation.  */
   BFD_RELOC_ARC_GOTPC32,
-
-/* BFD_RELOC_ARC_PLT32 Arc relocation.  */
   BFD_RELOC_ARC_PLT32,
-
-/* BFD_RELOC_ARC_COPY Arc relocation.  */
   BFD_RELOC_ARC_COPY,
-
-/* BFD_RELOC_ARC_GLOB_DAT Arc relocation.  */
   BFD_RELOC_ARC_GLOB_DAT,
-
-/* BFD_RELOC_ARC_JMP_SLOT Arc relocation.  */
   BFD_RELOC_ARC_JMP_SLOT,
-
-/* BFD_RELOC_ARC_RELATIVE Arc relocation.  */
   BFD_RELOC_ARC_RELATIVE,
-
-/* BFD_RELOC_ARC_GOTOFF Arc relocation.  */
   BFD_RELOC_ARC_GOTOFF,
-
-/* BFD_RELOC_ARC_GOTPC Arc relocation.  */
   BFD_RELOC_ARC_GOTPC,
-
-/* BFD_RELOC_ARC_S21W_PCREL_PLT Arc relocation.  */
   BFD_RELOC_ARC_S21W_PCREL_PLT,
-
-/* BFD_RELOC_ARC_S25H_PCREL_PLT Arc relocation.  */
   BFD_RELOC_ARC_S25H_PCREL_PLT,
-
-/* BFD_RELOC_ARC_TLS_DTPMOD Arc relocation.  */
   BFD_RELOC_ARC_TLS_DTPMOD,
-
-/* BFD_RELOC_ARC_TLS_TPOFF Arc relocation.  */
   BFD_RELOC_ARC_TLS_TPOFF,
-
-/* BFD_RELOC_ARC_TLS_GD_GOT Arc relocation.  */
   BFD_RELOC_ARC_TLS_GD_GOT,
-
-/* BFD_RELOC_ARC_TLS_GD_LD Arc relocation.  */
   BFD_RELOC_ARC_TLS_GD_LD,
-
-/* BFD_RELOC_ARC_TLS_GD_CALL Arc relocation.  */
   BFD_RELOC_ARC_TLS_GD_CALL,
-
-/* BFD_RELOC_ARC_TLS_IE_GOT Arc relocation.  */
   BFD_RELOC_ARC_TLS_IE_GOT,
-
-/* BFD_RELOC_ARC_TLS_DTPOFF Arc relocation.  */
   BFD_RELOC_ARC_TLS_DTPOFF,
-
-/* BFD_RELOC_ARC_TLS_DTPOFF_S9 Arc relocation.  */
   BFD_RELOC_ARC_TLS_DTPOFF_S9,
-
-/* BFD_RELOC_ARC_TLS_LE_S9 Arc relocation.  */
   BFD_RELOC_ARC_TLS_LE_S9,
-
-/* BFD_RELOC_ARC_TLS_LE_32 Arc relocation.  */
   BFD_RELOC_ARC_TLS_LE_32,
-
-/* BFD_RELOC_ARC_S25W_PCREL_PLT Arc relocation.  */
   BFD_RELOC_ARC_S25W_PCREL_PLT,
-
-/* BFD_RELOC_ARC_S21H_PCREL_PLT Arc relocation.
---MARKER_ARC_RELOCS_END--  */
   BFD_RELOC_ARC_S21H_PCREL_PLT,
 
 /* ADI Blackfin 16 bit immediate absolute reloc.  */
@@ -5940,6 +5812,14 @@ the GOT entry for this symbol.  Used in conjunction with
 BFD_RELOC_AARCH64_ADR_GOTPAGE.  Valid in ILP32 ABI only.  */
   BFD_RELOC_AARCH64_LD32_GOT_LO12_NC,
 
+/* Unsigned 16 bit byte offset for 64 bit load/store from the GOT entry
+for this symbol.  Valid in LP64 ABI only.  */
+  BFD_RELOC_AARCH64_MOVW_GOTOFF_G0_NC,
+
+/* Unsigned 16 bit byte higher offset for 64 bit load/store from the GOT entry
+for this symbol.  Valid in LP64 ABI only.  */
+  BFD_RELOC_AARCH64_MOVW_GOTOFF_G1,
+
 /* Unsigned 15 bit byte offset for 64 bit load/store from the page of
 the GOT entry for this symbol.  Valid in LP64 ABI only.  */
   BFD_RELOC_AARCH64_LD64_GOTOFF_LO15,
@@ -5964,11 +5844,11 @@ tls_index structure.  Used in conjunction with
 BFD_RELOC_AARCH64_TLSGD_ADR_PAGE21.  */
   BFD_RELOC_AARCH64_TLSGD_ADD_LO12_NC,
 
-/* AArch64 TLS INITIAL EXEC relocation.  */
-  BFD_RELOC_AARCH64_TLSIE_MOVW_GOTTPREL_G1,
+/* AArch64 TLS General Dynamic relocation.  */
+  BFD_RELOC_AARCH64_TLSGD_MOVW_G0_NC,
 
-/* AArch64 TLS INITIAL EXEC relocation.  */
-  BFD_RELOC_AARCH64_TLSIE_MOVW_GOTTPREL_G0_NC,
+/* AArch64 TLS General Dynamic relocation.  */
+  BFD_RELOC_AARCH64_TLSGD_MOVW_G1,
 
 /* AArch64 TLS INITIAL EXEC relocation.  */
   BFD_RELOC_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21,
@@ -5981,6 +5861,12 @@ BFD_RELOC_AARCH64_TLSGD_ADR_PAGE21.  */
 
 /* AArch64 TLS INITIAL EXEC relocation.  */
   BFD_RELOC_AARCH64_TLSIE_LD_GOTTPREL_PREL19,
+
+/* AArch64 TLS INITIAL EXEC relocation.  */
+  BFD_RELOC_AARCH64_TLSIE_MOVW_GOTTPREL_G0_NC,
+
+/* AArch64 TLS INITIAL EXEC relocation.  */
+  BFD_RELOC_AARCH64_TLSIE_MOVW_GOTTPREL_G1,
 
 /* bit[23:12] of byte offset to module TLS base address.  */
   BFD_RELOC_AARCH64_TLSLD_ADD_DTPREL_HI12,
@@ -7119,7 +7005,8 @@ bfd_size_type bfd_convert_section_size
    (bfd *ibfd, asection *isec, bfd *obfd, bfd_size_type size);
 
 bfd_boolean bfd_convert_section_contents
-   (bfd *ibfd, asection *isec, bfd *obfd, bfd_byte **ptr);
+   (bfd *ibfd, asection *isec, bfd *obfd,
+    bfd_byte **ptr, bfd_size_type *ptr_size);
 
 /* Extracted from archive.c.  */
 symindex bfd_get_next_mapent
@@ -7166,6 +7053,7 @@ bfd_boolean generic_core_file_matches_executable_p
 
 enum bfd_flavour
 {
+  /* N.B. Update bfd_flavour_name if you change this.  */
   bfd_target_unknown_flavour,
   bfd_target_aout_flavour,
   bfd_target_coff_flavour,
@@ -7584,6 +7472,8 @@ const char ** bfd_target_list (void);
 const bfd_target *bfd_search_for_target
    (int (*search_func) (const bfd_target *, void *),
     void *);
+
+const char *bfd_flavour_name (enum bfd_flavour flavour);
 
 /* Extracted from format.c.  */
 bfd_boolean bfd_check_format (bfd *abfd, bfd_format format);

@@ -225,9 +225,8 @@ struct target_ops
      HW breakpoint triggering.  */
   int (*supports_stopped_by_hw_breakpoint) (void);
 
-  /* Returns true if the target can evaluate conditions of
-     breakpoints.  */
-  int (*supports_conditional_breakpoints) (void);
+  /* Returns true if the target can do hardware single step.  */
+  int (*supports_hardware_single_step) (void);
 
   /* Returns 1 if target was stopped due to a watchpoint hit, 0 otherwise.  */
 
@@ -289,6 +288,9 @@ struct target_ops
 
   /* Returns true if vfork events are supported.  */
   int (*supports_vfork_events) (void);
+
+  /* Returns true if exec events are supported.  */
+  int (*supports_exec_events) (void);
 
   /* Allows target to re-initialize connection-specific settings.  */
   void (*handle_new_gdb_connection) (void);
@@ -468,6 +470,10 @@ int kill_inferior (int);
   (the_target->supports_vfork_events ? \
    (*the_target->supports_vfork_events) () : 0)
 
+#define target_supports_exec_events() \
+  (the_target->supports_exec_events ? \
+   (*the_target->supports_exec_events) () : 0)
+
 #define target_handle_new_gdb_connection()		 \
   do							 \
     {							 \
@@ -609,9 +615,9 @@ int kill_inferior (int);
   (the_target->supports_stopped_by_hw_breakpoint ? \
    (*the_target->supports_stopped_by_hw_breakpoint) () : 0)
 
-#define target_supports_conditional_breakpoints() \
-  (the_target->supports_conditional_breakpoints ? \
-   (*the_target->supports_conditional_breakpoints) () : 0)
+#define target_supports_hardware_single_step() \
+  (the_target->supports_hardware_single_step ? \
+   (*the_target->supports_hardware_single_step) () : 0)
 
 #define target_stopped_by_hw_breakpoint() \
   (the_target->stopped_by_hw_breakpoint ? \
@@ -648,5 +654,7 @@ int write_inferior_memory (CORE_ADDR memaddr, const unsigned char *myaddr,
 int set_desired_thread (int id);
 
 const char *target_pid_to_str (ptid_t);
+
+int target_can_do_hardware_single_step (void);
 
 #endif /* TARGET_H */

@@ -34,7 +34,7 @@
    `bfd_set_arch_mach'.  */
 #define TARGET_ARCH bfd_arch_arc
 
-/* `extsym - .' expressions can be emitted using PC-relative
+/* The `extsym - .' expressions can be emitted using PC-relative
    relocs.  */
 #define DIFF_EXPR_OK
 
@@ -110,7 +110,7 @@ extern long md_pcrel_from_section (struct fix *, segT);
 /* HANDLE_ALIGN called after all the assembly has been done,
    so we can fill in all the rs_align_code type frags with
    nop instructions.  */
-#define HANDLE_ALIGN(FRAGP)	 arc_handle_align(FRAGP)
+#define HANDLE_ALIGN(FRAGP)	 arc_handle_align (FRAGP)
 
 /* Values passed to md_apply_fix3 don't include the symbol value.  */
 #define MD_APPLY_SYM_VALUE(FIX) 0
@@ -171,9 +171,9 @@ extern long md_pcrel_from_section (struct fix *, segT);
 /* This hook is required to parse register names as operands.  */
 #define md_parse_name(name, exp, m, c) arc_parse_name (name, exp)
 
-extern int arc_parse_name (const char *, struct expressionS *);
+extern bfd_boolean arc_parse_name (const char *, struct expressionS *);
 extern int tc_arc_fix_adjustable (struct fix *);
-extern void arc_handle_align (fragS* fragP);
+extern void arc_handle_align (fragS *);
 extern void arc_cons_fix_new (fragS *, int, int, expressionS *,
 			      bfd_reloc_code_real_type);
 extern void arc_frob_label (symbolS *);
@@ -183,7 +183,7 @@ extern void arc_frob_label (symbolS *);
 /* Registers are generally saved at negative offsets to the CFA.  */
 #define DWARF2_CIE_DATA_ALIGNMENT	(-4)
 
-/* Define the NOPs (the first one is also used by generic code).  */
-#define NOP_OPCODE   0x000078E0
-#define NOP_OPCODE_L 0x264A7000 /* mov 0,0.  */
+/* Define the NOPs.  */
+#define NOP_OPCODE_S   0x000078E0
+#define NOP_OPCODE_L   0x264A7000 /* mov 0,0.  */
 

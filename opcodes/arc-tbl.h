@@ -15288,9 +15288,6 @@
 /* upkqb<.f> a,b,u6 00110bbb01100001FBBBuuuuuuAAAAAA.  */
 { "upkqb", 0x30610000, 0xF8FF0000, ARC_OPCODE_ARC700, ARITH, NONE, { RA, RB, UIMM6_20 }, { C_F }},
 
-/* upkqb<.f><.cc> b,b,u6 00110bbb11100001100001100001QQQQ.  */
-//{ "upkqb", 0x30E18610, 0xF8FFFFF0, ARC_OPCODE_ARC700, ARITH, NONE, { RB, RBdup, UIMM6_AXX_ }, { C_F, C_CC }},
-
 /* upkqb<.f> b,b,s12 00110bbb10100001FBBBssssssSSSSSS.  */
 { "upkqb", 0x30A10000, 0xF8FF0000, ARC_OPCODE_ARC700, ARITH, NONE, { RB, RBdup, SIMM12_20 }, { C_F }},
 

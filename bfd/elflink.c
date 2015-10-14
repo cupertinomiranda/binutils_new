@@ -246,7 +246,7 @@ _bfd_elf_link_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
 
   /* A dynamically linked executable has a .interp section, but a
      shared library does not.  */
-  if (bfd_link_executable (info))
+  if (bfd_link_executable (info) && !info->nointerp)
     {
       s = bfd_make_section_anyway_with_flags (abfd, ".interp",
 					      flags | SEC_READONLY);
@@ -1714,6 +1714,13 @@ _bfd_elf_add_default_symbol (bfd *abfd,
 	  else
 	    h->versioned = versioned;
 	}
+    }
+  else
+    {
+      /* PR ld/19073: We may see an unversioned definition after the
+	 default version.  */
+      if (p == NULL)
+	return TRUE;
     }
 
   bed = get_elf_backend_data (abfd);
@@ -4216,7 +4223,7 @@ error_free_dyn:
 
 	  /* If this symbol has default visibility and the user has
 	     requested we not re-export it, then mark it as hidden.  */
-	  if (definition
+	  if (!bfd_is_und_section (sec)
 	      && !dynamic
 	      && abfd->no_export
 	      && ELF_ST_VISIBILITY (isym->st_other) != STV_INTERNAL)
@@ -5763,7 +5770,7 @@ bfd_elf_size_dynamic_sections (bfd *output_bfd,
       bfd_boolean all_defined;
 
       *sinterpptr = bfd_get_linker_section (dynobj, ".interp");
-      BFD_ASSERT (*sinterpptr != NULL || !bfd_link_executable (info));
+      BFD_ASSERT (*sinterpptr != NULL || !bfd_link_executable (info) || info->nointerp);
 
       if (soname != NULL)
 	{
@@ -6814,7 +6821,7 @@ merge_sections_remove_hook (bfd *abfd ATTRIBUTE_UNUSED,
 /* Finish SHF_MERGE section merging.  */
 
 bfd_boolean
-_bfd_elf_merge_sections (bfd *abfd, struct bfd_link_info *info)
+_bfd_elf_merge_sections (bfd *obfd, struct bfd_link_info *info)
 {
   bfd *ibfd;
   asection *sec;
@@ -6823,7 +6830,10 @@ _bfd_elf_merge_sections (bfd *abfd, struct bfd_link_info *info)
     return FALSE;
 
   for (ibfd = info->input_bfds; ibfd != NULL; ibfd = ibfd->link.next)
-    if ((ibfd->flags & DYNAMIC) == 0)
+    if ((ibfd->flags & DYNAMIC) == 0
+	&& bfd_get_flavour (ibfd) == bfd_target_elf_flavour
+	&& (elf_elfheader (ibfd)->e_ident[EI_CLASS]
+	    == get_elf_backend_data (obfd)->s->elfclass))
       for (sec = ibfd->sections; sec != NULL; sec = sec->next)
 	if ((sec->flags & SEC_MERGE) != 0
 	    && !bfd_is_abs_section (sec->output_section))
@@ -6831,7 +6841,7 @@ _bfd_elf_merge_sections (bfd *abfd, struct bfd_link_info *info)
 	    struct bfd_elf_section_data *secdata;
 
 	    secdata = elf_section_data (sec);
-	    if (! _bfd_add_merge_section (abfd,
+	    if (! _bfd_add_merge_section (obfd,
 					  &elf_hash_table (info)->merge_info,
 					  sec, &secdata->sec_info))
 	      return FALSE;
@@ -6840,7 +6850,7 @@ _bfd_elf_merge_sections (bfd *abfd, struct bfd_link_info *info)
 	  }
 
   if (elf_hash_table (info)->merge_info != NULL)
-    _bfd_merge_sections (abfd, info, elf_hash_table (info)->merge_info,
+    _bfd_merge_sections (obfd, info, elf_hash_table (info)->merge_info,
 			 merge_sections_remove_hook);
   return TRUE;
 }
@@ -8193,7 +8203,7 @@ ext64b_r_offset (const void *p)
    referenced must be updated.  Update all the relocations found in
    RELDATA.  */
 
-static void
+static bfd_boolean
 elf_link_adjust_relocs (bfd *abfd,
 			struct bfd_elf_section_reloc_data *reldata,
 			bfd_boolean sort)
@@ -8259,7 +8269,7 @@ elf_link_adjust_relocs (bfd *abfd,
       bfd_vma r_off;
       size_t elt_size;
       bfd_byte *base, *end, *p, *loc;
-      bfd_byte buf[sizeof (Elf64_External_Rela)];
+      bfd_byte *buf = NULL;
 
       if (bed->s->arch_size == 32)
 	{
@@ -8282,12 +8292,12 @@ elf_link_adjust_relocs (bfd *abfd,
 	    abort ();
 	}
 
-      /*  Must use a stable sort here.  Insertion sort, since the
-	  relocs are mostly sorted already.  */
+      /*  Must use a stable sort here.  A modified insertion sort,
+	  since the relocs are mostly sorted already.  */
       elt_size = reldata->hdr->sh_entsize;
       base = reldata->hdr->contents;
       end = base + count * elt_size;
-      if (elt_size > sizeof (buf))
+      if (elt_size > sizeof (Elf64_External_Rela))
 	abort ();
 
       /* Ensure the first element is lowest.  This acts as a sentinel,
@@ -8307,9 +8317,10 @@ elf_link_adjust_relocs (bfd *abfd,
 	  /* Don't just swap *base and *loc as that changes the order
 	     of the original base[0] and base[1] if they happen to
 	     have the same r_offset.  */
-	  memcpy (buf, loc, elt_size);
+	  bfd_byte onebuf[sizeof (Elf64_External_Rela)];
+	  memcpy (onebuf, loc, elt_size);
 	  memmove (base + elt_size, base, loc - base);
-	  memcpy (base, buf, elt_size);
+	  memcpy (base, onebuf, elt_size);
 	}
 
       for (p = base + elt_size; (p += elt_size) < end; )
@@ -8323,15 +8334,46 @@ elf_link_adjust_relocs (bfd *abfd,
 	  loc += elt_size;
 	  if (loc != p)
 	    {
-	      memcpy (buf, p, elt_size);
-	      memmove (loc + elt_size, loc, p - loc);
-	      memcpy (loc, buf, elt_size);
+	      /* Chances are there is a run of relocs to insert here,
+		 from one of more input files.  Files are not always
+		 linked in order due to the way elf_link_input_bfd is
+		 called.  See pr17666.  */
+	      size_t sortlen = p - loc;
+	      bfd_vma r_off2 = (*ext_r_off) (loc);
+	      size_t runlen = elt_size;
+	      size_t buf_size = 96 * 1024;
+	      while (p + runlen < end
+		     && (sortlen <= buf_size
+			 || runlen + elt_size <= buf_size)
+		     && r_off2 > (*ext_r_off) (p + runlen))
+		runlen += elt_size;
+	      if (buf == NULL)
+		{
+		  buf = bfd_malloc (buf_size);
+		  if (buf == NULL)
+		    return FALSE;
+		}
+	      if (runlen < sortlen)
+		{
+		  memcpy (buf, p, runlen);
+		  memmove (loc + runlen, loc, sortlen);
+		  memcpy (loc, buf, runlen);
+		}
+	      else
+		{
+		  memcpy (buf, loc, sortlen);
+		  memmove (loc, p, runlen);
+		  memcpy (loc + runlen, buf, sortlen);
+		}
+	      p += runlen - elt_size;
 	    }
 	}
       /* Hashes are no longer valid.  */
       free (reldata->hashes);
       reldata->hashes = NULL;
+      free (buf);
     }
+  return TRUE;
 }
 
 struct elf_link_sort_rela
@@ -11000,7 +11042,7 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 		    max_sym_count = sym_count;
 
 		  if (sym_count > max_sym_shndx_count
-		      && elf_symtab_shndx (sec->owner) != 0)
+		      && elf_symtab_shndx_list (sec->owner) != NULL)
 		    max_sym_shndx_count = sym_count;
 
 		  if ((sec->flags & SEC_RELOC) != 0)
@@ -11530,8 +11572,8 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
       Elf_Internal_Shdr *symstrtab_hdr;
       file_ptr off = symtab_hdr->sh_offset + symtab_hdr->sh_size;
 
-      symtab_shndx_hdr = &elf_tdata (abfd)->symtab_shndx_hdr;
-      if (symtab_shndx_hdr->sh_name != 0)
+      symtab_shndx_hdr = & elf_symtab_shndx_list (abfd)->hdr;
+      if (symtab_shndx_hdr != NULL && symtab_shndx_hdr->sh_name != 0)
 	{
 	  symtab_shndx_hdr->sh_type = SHT_SYMTAB_SHNDX;
 	  symtab_shndx_hdr->sh_entsize = sizeof (Elf_External_Sym_Shndx);
@@ -11577,10 +11619,12 @@ bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 	continue;
 
       sort = bed->sort_relocs_p == NULL || (*bed->sort_relocs_p) (o);
-      if (esdo->rel.hdr != NULL)
-	elf_link_adjust_relocs (abfd, &esdo->rel, sort);
-      if (esdo->rela.hdr != NULL)
-	elf_link_adjust_relocs (abfd, &esdo->rela, sort);
+      if (esdo->rel.hdr != NULL
+	  && !elf_link_adjust_relocs (abfd, &esdo->rel, sort))
+	return FALSE;
+      if (esdo->rela.hdr != NULL
+	  && !elf_link_adjust_relocs (abfd, &esdo->rela, sort))
+	return FALSE;
 
       /* Set the reloc_count field to 0 to prevent write_relocs from
 	 trying to swap the relocs out itself.  */

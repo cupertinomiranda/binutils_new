@@ -69,6 +69,7 @@ static const char *gdb_agent_op_names [gdb_agent_op_last] =
 #undef DEFOP
   };
 
+#ifndef IN_PROCESS_AGENT
 static const unsigned char gdb_agent_op_sizes [gdb_agent_op_last] =
   {
     0
@@ -76,6 +77,7 @@ static const unsigned char gdb_agent_op_sizes [gdb_agent_op_last] =
 #include "ax.def"
 #undef DEFOP
   };
+#endif
 
 /* A wrapper for gdb_agent_op_names that does some bounds-checking.  */
 
@@ -104,7 +106,7 @@ gdb_parse_agent_expr (char **actparm)
   ++act;  /* skip a comma */
   aexpr = XNEW (struct agent_expr);
   aexpr->length = xlen;
-  aexpr->bytes = xmalloc (xlen);
+  aexpr->bytes = (unsigned char *) xmalloc (xlen);
   hex2bin (act, aexpr->bytes, xlen);
   *actparm = act + (xlen * 2);
   return aexpr;
@@ -129,7 +131,7 @@ gdb_unparse_agent_expr (struct agent_expr *aexpr)
 {
   char *rslt;
 
-  rslt = xmalloc (2 * aexpr->length + 1);
+  rslt = (char *) xmalloc (2 * aexpr->length + 1);
   bin2hex (aexpr->bytes, rslt, aexpr->length);
   return rslt;
 }

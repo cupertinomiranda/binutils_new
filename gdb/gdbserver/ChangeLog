@@ -1,3 +1,404 @@
+2015-10-12  Yao Qi  <yao.qi@linaro.org>
+
+	* linux-aarch64-low.c: Update all callers as emit_load_store
+	is renamed to aarch64_emit_load_store.
+
+2015-10-12  Yao Qi  <yao.qi@linaro.org>
+
+	* linux-aarch64-low.c: Update all callers of function renaming
+	from emit_insn to aarch64_emit_insn.
+
+2015-10-12  Yao Qi  <yao.qi@linaro.org>
+
+	* linux-aarch64-low.c (enum aarch64_opcodes): Move to
+	arch/aarch64-insn.h.
+	(struct aarch64_memory_operand): Likewise.
+	(ENCODE): Likewise.
+	(emit_insn): Move to arch/aarch64-insn.c.
+	(emit_b, emit_bcond, emit_cb, emit_tb): Remove.
+	(emit_load_store): Move to arch/aarch64-insn.c.
+	(emit_ldr, emit_ldrb, emit_ldrsw, emit_nop): Remove.
+	(can_encode_int32): Remove.
+
+2015-10-12  Yao Qi  <yao.qi@linaro.org>
+
+	* linux-aarch64-low.c (extract_signed_bitfield): Remove.
+	(aarch64_decode_ldr_literal): Move to gdb/arch/aarch64-insn.c.
+	(aarch64_relocate_instruction): Likewise.
+	(struct aarch64_insn_data): Move to gdb/arch/aarch64-insn.h.
+	(struct aarch64_insn_visitor): Likewise.
+
+2015-10-12  Yao Qi  <yao.qi@linaro.org>
+
+	* linux-aarch64-low.c (struct aarch64_insn_data): New.
+	(struct aarch64_insn_visitor): New.
+	(struct aarch64_insn_relocation_data): New.
+	(aarch64_ftrace_insn_reloc_b): New function.
+	(aarch64_ftrace_insn_reloc_b_cond): Likewise.
+	(aarch64_ftrace_insn_reloc_cb): Likewise.
+	(aarch64_ftrace_insn_reloc_tb): Likewise.
+	(aarch64_ftrace_insn_reloc_adr): Likewise.
+	(aarch64_ftrace_insn_reloc_ldr_literal): Likewise.
+	(aarch64_ftrace_insn_reloc_others): Likewise.
+	(visitor): New.
+	(aarch64_relocate_instruction): Use visitor.
+
+2015-10-12  Yao Qi  <yao.qi@linaro.org>
+
+	* linux-aarch64-low.c (aarch64_relocate_instruction): Return
+	int.  Add argument buf.
+	(aarch64_install_fast_tracepoint_jump_pad): Pass buf to
+	aarch64_relocate_instruction.
+
+2015-10-12  Yao Qi  <yao.qi@linaro.org>
+
+	* linux-aarch64-low.c (aarch64_relocate_instruction): Add
+	argument insn.  Remove local variable insn.  Don't call
+	target_read_uint32.
+	(aarch64_install_fast_tracepoint_jump_pad): Call
+	target_read_uint32.
+
+2015-09-30  Yao Qi  <yao.qi@linaro.org>
+
+	* linux-aarch64-low.c (emit_movk): Shorten a long line.
+	(emit_load_store_pair): Likewise.
+
+2015-09-25  Simon Marchi  <simon.marchi@ericsson.com>
+
+	* dll.c (match_dll): Add cast(s).
+	(unloaded_dll): Likewise.
+	* linux-low.c (second_thread_of_pid_p): Likewise.
+	(delete_lwp_callback): Likewise.
+	(count_events_callback): Likewise.
+	(select_event_lwp_callback): Likewise.
+	(linux_set_resume_request): Likewise.
+	* server.c (accumulate_file_name_length): Likewise.
+	(emit_dll_description): Likewise.
+	(handle_qxfer_threads_worker): Likewise.
+	(visit_actioned_threads): Likewise.
+	* thread-db.c (any_thread_of): Likewise.
+	* tracepoint.c (same_process_p): Likewise.
+	(match_blocktype): Likewise.
+	(build_traceframe_info_xml): Likewise.
+
+2015-09-25  Simon Marchi  <simon.marchi@ericsson.com>
+
+	* ax.c (gdb_parse_agent_expr): Add cast to allocation result
+	assignment.
+	(gdb_unparse_agent_expr): Likewise.
+	* hostio.c (require_data): Likewise.
+	(handle_pread): Likewise.
+	* linux-low.c (disable_regset): Likewise.
+	(fetch_register): Likewise.
+	(store_register): Likewise.
+	(get_dynamic): Likewise.
+	(linux_qxfer_libraries_svr4): Likewise.
+	* mem-break.c (delete_fast_tracepoint_jump): Likewise.
+	(set_fast_tracepoint_jump): Likewise.
+	(uninsert_fast_tracepoint_jumps_at): Likewise.
+	(reinsert_fast_tracepoint_jumps_at): Likewise.
+	(validate_inserted_breakpoint): Likewise.
+	(clone_agent_expr): Likewise.
+	* regcache.c (init_register_cache): Likewise.
+	* remote-utils.c (putpkt_binary_1): Likewise.
+	(decode_M_packet): Likewise.
+	(decode_X_packet): Likewise.
+	(look_up_one_symbol): Likewise.
+	(relocate_instruction): Likewise.
+	(monitor_output): Likewise.
+	* server.c (handle_search_memory): Likewise.
+	(handle_qxfer_exec_file): Likewise.
+	(handle_qxfer_libraries): Likewise.
+	(handle_qxfer): Likewise.
+	(handle_query): Likewise.
+	(handle_v_cont): Likewise.
+	(handle_v_run): Likewise.
+	(captured_main): Likewise.
+	* target.c (write_inferior_memory): Likewise.
+	* thread-db.c (try_thread_db_load_from_dir): Likewise.
+	* tracepoint.c (init_trace_buffer): Likewise.
+	(add_tracepoint_action): Likewise.
+	(add_traceframe): Likewise.
+	(add_traceframe_block): Likewise.
+	(cmd_qtdpsrc): Likewise.
+	(cmd_qtdv): Likewise.
+	(cmd_qtstatus): Likewise.
+	(response_source): Likewise.
+	(response_tsv): Likewise.
+	(cmd_qtnotes): Likewise.
+	(gdb_collect): Likewise.
+	(initialize_tracepoint): Likewise.
+
+2015-09-21  Pierre Langlois  <pierre.langlois@arm.com>
+
+	* linux-aarch64-low-.c: Include ax.h and tracepoint.h.
+	(enum aarch64_opcodes) <RET>, <SUBS>, <AND>, <ORR>, <ORN>,
+	<EOR>, <LSLV>, <LSRV>, <ASRV>, <SBFM>, <UBFM>, <CSINC>, <MUL>,
+	<NOP>: New.
+	(enum aarch64_condition_codes): New enum.
+	(w0): New static global.
+	(fp): Likewise.
+	(lr): Likewise.
+	(struct aarch64_memory_operand) <type>: New
+	MEMORY_OPERAND_POSTINDEX type.
+	(postindex_memory_operand): New helper function.
+	(emit_ret): New function.
+	(emit_load_store_pair): New function, factored out of emit_stp
+	with support for MEMORY_OPERAND_POSTINDEX.
+	(emit_stp): Rewrite using emit_load_store_pair.
+	(emit_ldp): New function.
+	(emit_load_store): Likewise.
+	(emit_ldr): Mention post-index instruction in comment.
+	(emit_ldrh): New function.
+	(emit_ldrb): New function.
+	(emit_ldrsw): Mention post-index instruction in comment.
+	(emit_str): Likewise.
+	(emit_subs): New function.
+	(emit_cmp): Likewise.
+	(emit_and): Likewise.
+	(emit_orr): Likewise.
+	(emit_orn): Likewise.
+	(emit_eor): Likewise.
+	(emit_mvn): Likewise.
+	(emit_lslv): Likewise.
+	(emit_lsrv): Likewise.
+	(emit_asrv): Likewise.
+	(emit_mul): Likewise.
+	(emit_sbfm): Likewise.
+	(emit_sbfx): Likewise.
+	(emit_ubfm): Likewise.
+	(emit_ubfx): Likewise.
+	(emit_csinc): Likewise.
+	(emit_cset): Likewise.
+	(emit_nop): Likewise.
+	(emit_ops_insns): New helper function.
+	(emit_pop): Likewise.
+	(emit_push): Likewise.
+	(aarch64_emit_prologue): New function.
+	(aarch64_emit_epilogue): Likewise.
+	(aarch64_emit_add): Likewise.
+	(aarch64_emit_sub): Likewise.
+	(aarch64_emit_mul): Likewise.
+	(aarch64_emit_lsh): Likewise.
+	(aarch64_emit_rsh_signed): Likewise.
+	(aarch64_emit_rsh_unsigned): Likewise.
+	(aarch64_emit_ext): Likewise.
+	(aarch64_emit_log_not): Likewise.
+	(aarch64_emit_bit_and): Likewise.
+	(aarch64_emit_bit_or): Likewise.
+	(aarch64_emit_bit_xor): Likewise.
+	(aarch64_emit_bit_not): Likewise.
+	(aarch64_emit_equal): Likewise.
+	(aarch64_emit_less_signed): Likewise.
+	(aarch64_emit_less_unsigned): Likewise.
+	(aarch64_emit_ref): Likewise.
+	(aarch64_emit_if_goto): Likewise.
+	(aarch64_emit_goto): Likewise.
+	(aarch64_write_goto_address): Likewise.
+	(aarch64_emit_const): Likewise.
+	(aarch64_emit_call): Likewise.
+	(aarch64_emit_reg): Likewise.
+	(aarch64_emit_pop): Likewise.
+	(aarch64_emit_stack_flush): Likewise.
+	(aarch64_emit_zero_ext): Likewise.
+	(aarch64_emit_swap): Likewise.
+	(aarch64_emit_stack_adjust): Likewise.
+	(aarch64_emit_int_call_1): Likewise.
+	(aarch64_emit_void_call_2): Likewise.
+	(aarch64_emit_eq_goto): Likewise.
+	(aarch64_emit_ne_goto): Likewise.
+	(aarch64_emit_lt_goto): Likewise.
+	(aarch64_emit_le_goto): Likewise.
+	(aarch64_emit_gt_goto): Likewise.
+	(aarch64_emit_ge_got): Likewise.
+	(aarch64_emit_ops_impl): New static global variable.
+	(aarch64_emit_ops): New target function, return
+	&aarch64_emit_ops_impl.
+	(struct linux_target_ops): Install it.
+
+2015-09-21  Pierre Langlois  <pierre.langlois@arm.com>
+
+	* Makefile.in (linux-aarch64-ipa.o, aarch64-ipa.o): New rules.
+	* configure.srv (aarch64*-*-linux*): Add linux-aarch64-ipa.o and
+	aarch64-ipa.o.
+	* linux-aarch64-ipa.c: New file.
+	* linux-aarch64-low.c: Include arch/aarch64-insn.h, inttypes.h
+	and endian.h.
+	(aarch64_get_thread_area): New target method.
+	(extract_signed_bitfield): New helper function.
+	(aarch64_decode_ldr_literal): New function.
+	(enum aarch64_opcodes): New enum.
+	(struct aarch64_register): New struct.
+	(struct aarch64_operand): New struct.
+	(x0): New static global.
+	(x1): Likewise.
+	(x2): Likewise.
+	(x3): Likewise.
+	(x4): Likewise.
+	(w2): Likewise.
+	(ip0): Likewise.
+	(sp): Likewise.
+	(xzr): Likewise.
+	(aarch64_register): New helper function.
+	(register_operand): Likewise.
+	(immediate_operand): Likewise.
+	(struct aarch64_memory_operand): New struct.
+	(offset_memory_operand): New helper function.
+	(preindex_memory_operand): Likewise.
+	(enum aarch64_system_control_registers): New enum.
+	(ENCODE): New macro.
+	(emit_insn): New helper function.
+	(emit_b): New function.
+	(emit_bcond): Likewise.
+	(emit_cb): Likewise.
+	(emit_tb): Likewise.
+	(emit_blr): Likewise.
+	(emit_stp): Likewise.
+	(emit_ldp_q_offset): Likewise.
+	(emit_stp_q_offset): Likewise.
+	(emit_load_store): Likewise.
+	(emit_ldr): Likewise.
+	(emit_ldrsw): Likewise.
+	(emit_str): Likewise.
+	(emit_ldaxr): Likewise.
+	(emit_stxr): Likewise.
+	(emit_stlr): Likewise.
+	(emit_data_processing_reg): Likewise.
+	(emit_data_processing): Likewise.
+	(emit_add): Likewise.
+	(emit_sub): Likewise.
+	(emit_mov): Likewise.
+	(emit_movk): Likewise.
+	(emit_mov_addr): Likewise.
+	(emit_mrs): Likewise.
+	(emit_msr): Likewise.
+	(emit_sevl): Likewise.
+	(emit_wfe): Likewise.
+	(append_insns): Likewise.
+	(can_encode_int32_in): New helper function.
+	(aarch64_relocate_instruction): New function.
+	(aarch64_install_fast_tracepoint_jump_pad): Likewise.
+	(aarch64_get_min_fast_tracepoint_insn_len): Likewise.
+	(struct linux_target_ops): Install aarch64_get_thread_area,
+	aarch64_install_fast_tracepoint_jump_pad and
+	aarch64_get_min_fast_tracepoint_insn_len.
+
+2015-09-21  Pierre Langlois  <pierre.langlois@arm.com>
+
+	* Makefile.in (aarch64-insn.o): New rule.
+	* configure.srv (aarch64*-*-linux*): Add aarch64-insn.o.
+
+2015-09-21  Yao Qi  <yao.qi@linaro.org>
+
+	* ax.c [!IN_PROCESS_AGENT] (gdb_agent_op_sizes): Define it.
+
+2015-09-21  Yao Qi  <yao.qi@linaro.org>
+
+	* tracepoint.c (max_jump_pad_size): Remove.
+
+2015-09-18  Yao Qi  <yao.qi@linaro.org>
+
+	* linux-aarch64-low.c: Don't include sys/uio.h.
+	(ps_get_thread_area): Call aarch64_ps_get_thread_area.
+
+2015-09-16  Wei-cheng Wang  <cole945@gmail.com>
+
+	* tracepoint.c (eval_result_type): Change prototype.
+	(condition_true_at_tracepoint): Fix argument to compiled_cond.
+
+2015-09-15  Pedro Alves  <palves@redhat.com>
+
+	* remote-utils.c (prepare_resume_reply) <TARGET_WAITKIND_EXECD>:
+	Check whether to report exec events instead of checking whether
+	multiprocess is enabled.
+
+2015-09-15  Pedro Alves  <palves@redhat.com>
+
+	PR remote/18965
+	* remote-utils.c (prepare_resume_reply): Merge
+	TARGET_WAITKIND_VFORK_DONE switch case with the
+	TARGET_WAITKIND_FORKED case.
+
+2015-09-15  Yao Qi  <yao.qi@linaro.org>
+
+	* server.c (handle_query): Check string comparison using
+	"else if" instead of "if".
+
+2015-09-15  Yao Qi  <yao.qi@linaro.org>
+
+	* server.c (vCont_supported): New global variable.
+	(handle_query): Set vCont_supported to 1 if "vContSupported+"
+	matches.  Append ";vContSupported+" to own_buf.
+	(handle_v_requests): Append ";s;S" to own_buf if target supports
+	hardware single step or vCont_supported is false.
+	(capture_main): Set vCont_supported to zero.
+
+2015-09-15  Yao Qi  <yao.qi@linaro.org>
+
+	* linux-low.c (linux_supports_conditional_breakpoints): Rename
+	it to ...
+	(linux_supports_hardware_single_step): ... New function.
+	(linux_target_ops): Update.
+	* lynx-low.c (lynx_target_ops): Set field
+	supports_hardware_single_step to target_can_do_hardware_single_step.
+	* nto-low.c (nto_target_ops): Likewise.
+	* spu-low.c (spu_target_ops): Likewise.
+	* win32-low.c (win32_target_ops): Likewise.
+	* target.c (target_can_do_hardware_single_step): New function.
+	* target.h (struct target_ops) <supports_conditional_breakpoints>:
+	Remove.  <supports_hardware_single_step>: New field.
+	(target_supports_conditional_breakpoints): Remove.
+	(target_supports_hardware_single_step): New macro.
+	(target_can_do_hardware_single_step): Declare.
+	* server.c (handle_query): Use target_supports_hardware_single_step
+	instead of target_supports_conditional_breakpoints.
+
+2015-09-15  Yao Qi  <yao.qi@linaro.org>
+
+	* linux-aarch64-low.c (aarch64_linux_siginfo_fixup): New
+	function.
+	(struct linux_target_ops the_low_target): Install
+	aarch64_linux_siginfo_fixup.
+
+2015-09-11  Don Breazeal  <donb@codesourcery.com>
+	    Luis Machado  <lgustavo@codesourcery.com>
+
+	* linux-low.c (linux_mourn): Static declaration.
+	(linux_arch_setup): Move in front of
+	handle_extended_wait.
+	(linux_arch_setup_thread): New function.
+	(handle_extended_wait): Handle exec events.  Call
+	linux_arch_setup_thread.  Make event_lwp argument a
+	pointer-to-a-pointer.
+	(check_zombie_leaders): Do not check stopped threads.
+	(linux_low_ptrace_options): Add PTRACE_O_TRACEEXEC.
+	(linux_low_filter_event): Add lwp and thread for exec'ing
+	non-leader thread if leader thread has been deleted.
+	Refactor code into linux_arch_setup_thread and call it.
+	Pass child lwp pointer by reference to handle_extended_wait.
+	(linux_wait_for_event_filtered): Update comment.
+	(linux_wait_1): Prevent clobbering exec event status.
+	(linux_supports_exec_events): New function.
+	(linux_target_ops) <supports_exec_events>: Initialize new member.
+	* lynx-low.c (lynx_target_ops) <supports_exec_events>: Initialize
+	new member.
+	* remote-utils.c (prepare_resume_reply): New stop reason 'exec'.
+	* server.c (report_exec_events): New global variable.
+	(handle_query): Handle qSupported query for exec-events feature.
+	(captured_main): Initialize report_exec_events.
+	* server.h (report_exec_events): Declare new global variable.
+	* target.h (struct target_ops) <supports_exec_events>: New
+	member.
+	(target_supports_exec_events): New macro.
+	* win32-low.c (win32_target_ops) <supports_exec_events>:
+	Initialize new member.
+
+2015-09-09  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* linux-low.c (linux_low_enable_btrace): Remove.
+	(linux_target_ops): Replace linux_low_enable_btrace with
+	linux_enable_btrace.
+
 2015-09-03  Yao Qi  <yao.qi@linaro.org>
 
 	* linux-aarch64-low.c (aarch64_insert_point): Call
