@@ -57,6 +57,8 @@ struct dynamic_sections
   asection	 *sdyn;
   asection	 *splt;
   asection	 *srelplt;
+  asection	 *sbss;
+  asection	 *srelbss;
 };
 
 static struct dynamic_sections
@@ -879,7 +881,8 @@ elf_arc_relocate_section (bfd * output_bfd,
 		    BFD_ASSERT(sreloc->contents != 0);
 
 		    loc = sreloc->contents;
-	      	    loc += sreloc->reloc_count++ * sizeof (Elf32_External_Rela); /* relA */
+	      	    loc += sreloc->reloc_count * sizeof (Elf32_External_Rela); /* relA */
+		    sreloc->reloc_count += 1;
 
 	      	    bfd_elf32_swap_reloca_out (output_bfd, &outrel, loc);
 
@@ -998,7 +1001,9 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
 	.sgotplt = NULL,
 	.sdyn = NULL,
 	.splt = NULL,
-	.srelplt = NULL
+	.srelplt = NULL,
+	.sbss = NULL,
+	.srelbss = NULL
   };
 
   dynobj = (elf_hash_table (info))->dynobj;
@@ -1054,6 +1059,9 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
   ds.sdyn = bfd_get_section_by_name (dynobj, ".dynamic");
   ds.splt = bfd_get_section_by_name (dynobj, ".plt");
   ds.srelplt = bfd_get_section_by_name (dynobj, ".rela.plt");
+
+  ds.sbss = bfd_get_section_by_name (dynobj, ".bss");
+  ds.srelbss = bfd_get_section_by_name (dynobj, ".rela.bss");
 
   ds.initialized = TRUE;
 
@@ -1270,6 +1278,20 @@ plt_do_relocs_for_symbol (bfd *abfd,
     }
 }
 
+#define ADD_RELA(BFD, SECTION, OFFSET, SYM_IDX, TYPE, ADDEND) \
+{\
+  struct dynamic_sections ds = arc_create_dynamic_sections (output_bfd, info); \
+  bfd_vma loc = (bfd_vma) ds.srel##SECTION->contents + ((ds.srel##SECTION->reloc_count++) * sizeof (Elf32_External_Rela)); \
+  Elf_Internal_Rela rel; \
+  /* Do Relocation */ \
+  bfd_put_32 (output_bfd, (bfd_vma) 0, ds.s##SECTION->contents + OFFSET); \
+  rel.r_addend = ADDEND; \
+  rel.r_offset = (ds.s##SECTION)->output_section->vma + (ds.s##SECTION)->output_offset + OFFSET; \
+  rel.r_info = ELF32_R_INFO (SYM_IDX, TYPE); \
+  bfd_elf32_swap_reloca_out (BFD, &rel, (bfd_byte *) loc); \
+}
+
+
 static void
 relocate_plt_for_symbol (bfd *output_bfd, 
 			 struct bfd_link_info *info,
@@ -1298,20 +1320,22 @@ relocate_plt_for_symbol (bfd *output_bfd,
   //fprintf(stderr, "GOT_OFFSET = 0x%x\n", got_offset);
 
   /* TODO: Fill in the entry in the .rela.plt section.  */
-  {
-    Elf_Internal_Rela rel;
-    bfd_byte *loc;
+  //{
+  //  Elf_Internal_Rela rel;
+  //  bfd_byte *loc;
 
-    rel.r_offset = (ds.sgotplt->output_section->vma
-          	  + ds.sgotplt->output_offset
-          	  + got_offset);
-    rel.r_addend = 0;
-    rel.r_info = ELF32_R_INFO (h->dynindx, R_ARC_JMP_SLOT);
+  //  rel.r_offset = (ds.sgotplt->output_section->vma
+  //        	  + ds.sgotplt->output_offset
+  //        	  + got_offset);
+  //  rel.r_addend = 0;
+  //  rel.r_info = ELF32_R_INFO (h->dynindx, R_ARC_JMP_SLOT);
 
-    loc = ds.srelplt->contents;
-    loc += plt_index * sizeof (Elf32_External_Rela); /* relA */
-    bfd_elf32_swap_reloca_out (output_bfd, &rel, loc);
-  }
+  //  loc = ds.srelplt->contents;
+  //  loc += plt_index * sizeof (Elf32_External_Rela); /* relA */
+  //  bfd_elf32_swap_reloca_out (output_bfd, &rel, loc);
+  //}
+
+  ADD_RELA (output_bfd, plt, got_offset, h->dynindx, R_ARC_JMP_SLOT, 0);
 
   if (h->got.offset != (bfd_vma) -1)
     {
@@ -1383,7 +1407,7 @@ elf_arc_adjust_dynamic_symbol (struct bfd_link_info *info,
 
   struct dynamic_sections ds = arc_create_dynamic_sections (dynobj, info);
 
-  if (h->type == STT_FUNC || h->needs_plt == 1)
+  if (h->type == STT_FUNC || h->type == STT_GNU_IFUNC || h->needs_plt == 1)
     {
       if (!bfd_link_pic (info) && !h->def_dynamic && !h->ref_dynamic)
 	{
@@ -1403,7 +1427,7 @@ elf_arc_adjust_dynamic_symbol (struct bfd_link_info *info,
 
       if (bfd_link_pic (info) || WILL_CALL_FINISH_DYNAMIC_SYMBOL (1, 0, h))
 	{
-	  bfd_vma	  loc = add_symbol_to_plt (info);
+	  bfd_vma loc = add_symbol_to_plt (info);
 
 	  if (!bfd_link_pic (info) && !h->def_regular)
 	    {
@@ -1414,7 +1438,7 @@ elf_arc_adjust_dynamic_symbol (struct bfd_link_info *info,
 	}
       else
         {
-          h->plt.offset = (bfd_vma) - 1;
+          h->plt.offset = (bfd_vma) -1;
           h->needs_plt = 0;
         }
     }
@@ -1492,22 +1516,9 @@ elf_arc_adjust_dynamic_symbol (struct bfd_link_info *info,
   h->root.u.def.value = s->size;
 
   /* Increment the section size to make room for the symbol.  */
-  s->size += h->size;
+  //s->size += h->size;
 
   return TRUE;
-}
-
-#define ADD_RELA(BFD, SECTION, OFFSET, SYM_IDX, TYPE, ADDEND) \
-{\
-  struct dynamic_sections ds = arc_create_dynamic_sections (output_bfd, info); \
-  bfd_vma loc = (bfd_vma) ds.srel##SECTION->contents + ((ds.srel##SECTION->reloc_count++) * sizeof (Elf32_External_Rela)); \
-  Elf_Internal_Rela rel; \
-  /* Do Relocation */ \
-  /* bfd_put_32 (output_bfd, (bfd_vma) 0, ds.s##SECTION->contents + OFFSET); */ \
-  rel.r_addend = ADDEND; \
-  rel.r_offset = (ds.s##SECTION)->output_section->vma + (ds.s##SECTION)->output_offset + OFFSET; \
-  rel.r_info = ELF32_R_INFO (SYM_IDX, TYPE); \
-  bfd_elf32_swap_reloca_out (BFD, &rel, (bfd_byte *) loc); \
 }
 
 /* Function :  elf_arc_finish_dynamic_symbol
@@ -1550,6 +1561,39 @@ elf_arc_finish_dynamic_symbol (bfd * output_bfd,
 		    R_ARC_GLOB_DAT, 0);
 	}
     }
+  if (h->needs_copy)
+    {
+      ADD_RELA (output_bfd, bss, h->root.u.def.value, h->dynindx, R_ARC_COPY, 0);
+    }
+
+  //if (h->needs_copy)
+  //  {
+  //    asection *s;
+  //    Elf_Internal_Rela rel;
+  //    bfd_byte *loc;
+
+  //    /* This symbol needs a copy reloc.  Set it up.  */
+
+  //    BFD_ASSERT (h->dynindx != -1
+  //      	  && (h->root.type == bfd_link_hash_defined
+  //      	      || h->root.type == bfd_link_hash_defweak));
+
+  //    s = bfd_get_section_by_name (h->root.u.def.section->owner,
+  //      			   ".rela.bss");
+  //    BFD_ASSERT (s != NULL);
+
+  //    rel.r_addend = 0;
+  //    rel.r_offset = (h->root.u.def.value
+  //      	      + h->root.u.def.section->output_section->vma
+  //      	      + h->root.u.def.section->output_offset);
+  //    rel.r_info = ELF32_R_INFO (h->dynindx, R_ARC_COPY);
+
+  //    loc =  s->contents;
+  //    loc += s->reloc_count * sizeof (Elf32_External_Rela); /* relA */
+  //    s->reloc_count += 1;
+
+  //    //bfd_elf32_swap_reloca_out (output_bfd, &rel, loc);
+  //  }
 
   /* Mark _DYNAMIC and _GLOBAL_OFFSET_TABLE_ as absolute.  */
   if (strcmp (h->root.root.string, "_DYNAMIC") == 0
@@ -1787,6 +1831,7 @@ arc_allocate_got (struct bfd_link_info *info)
 }
 
 
+#ifndef REMOVED
 static bfd_boolean
 bla (struct elf_link_hash_entry * h,
 		    void *info ATTRIBUTE_UNUSED)
@@ -1794,6 +1839,7 @@ bla (struct elf_link_hash_entry * h,
   
   return TRUE;
 }
+#endif
 
 /* Set the sizes of the dynamic sections.  */
 static		bfd_boolean
@@ -1809,10 +1855,12 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
   dynobj = (elf_hash_table (info))->dynobj;
   BFD_ASSERT (dynobj != NULL);
 
+#ifndef REMOVED
   arc_allocate_got (info);
   elf_link_hash_traverse (elf_hash_table(info),							\
 			  bla,
 			  (void *) info);
+#endif
 
   if ((elf_hash_table (info))->dynamic_sections_created)
     {
@@ -1993,6 +2041,70 @@ elf32_arc_gc_sweep_hook (bfd *                     abfd,
   return TRUE;
 }
 
+/* Copy the extra info we tack onto an elf_link_hash_entry.  */
+//static void
+//elf32_arc_copy_indirect_symbol (struct bfd_link_info *info,
+//				struct elf_link_hash_entry *dir,
+//				struct elf_link_hash_entry *ind)
+//{
+//#if 0
+//  struct elf32_arm_link_hash_entry *edir, *eind;
+//
+//  edir = (struct elf32_arm_link_hash_entry *) dir;
+//  eind = (struct elf32_arm_link_hash_entry *) ind;
+//
+//  if (eind->dyn_relocs != NULL)
+//    {
+//      if (edir->dyn_relocs != NULL)
+//	{
+//	  struct elf_dyn_relocs **pp;
+//	  struct elf_dyn_relocs *p;
+//
+//	  /* Add reloc counts against the indirect sym to the direct sym
+//	     list.  Merge any entries against the same section.  */
+//	  for (pp = &eind->dyn_relocs; (p = *pp) != NULL; )
+//	    {
+//	      struct elf_dyn_relocs *q;
+//
+//	      for (q = edir->dyn_relocs; q != NULL; q = q->next)
+//		if (q->sec == p->sec)
+//		  {
+//		    q->pc_count += p->pc_count;
+//		    q->count += p->count;
+//		    *pp = p->next;
+//		    break;
+//		  }
+//	      if (q == NULL)
+//		pp = &p->next;
+//	    }
+//	  *pp = edir->dyn_relocs;
+//	}
+//
+//      edir->dyn_relocs = eind->dyn_relocs;
+//      eind->dyn_relocs = NULL;
+//    }
+//#endif
+//
+//  if (ind->root.type == bfd_link_hash_indirect)
+//    {
+//      /* Copy over PLT info.  */
+//      dir->plt.noncall_refcount += ind->plt.noncall_refcount;
+//      ind->plt.noncall_refcount = 0;
+//
+//      /* We should only allocate a function to .iplt once the final
+//	 symbol information is known.  */
+//      BFD_ASSERT (!ind->is_iplt);
+//
+////      if (dir->got.refcount <= 0)
+////	{
+////	  edir->tls_type = eind->tls_type;
+////	  eind->tls_type = GOT_UNKNOWN;
+////	}
+//    }
+//
+//  _bfd_elf_link_hash_copy_indirect (info, dir, ind);
+//}
+
 #define TARGET_LITTLE_SYM   arc_elf32_le_vec
 #define TARGET_LITTLE_NAME  "elf32-littlearc"
 #define TARGET_BIG_SYM	    arc_elf32_be_vec
@@ -2015,9 +2127,11 @@ elf32_arc_gc_sweep_hook (bfd *                     abfd,
 #define elf_backend_finish_dynamic_sections  elf_arc_finish_dynamic_sections
 #define elf_backend_size_dynamic_sections    elf_arc_size_dynamic_sections
 
+//#define elf_backend_copy_indirect_symbol        elf32_arc_copy_indirect_symbol
+
 #define elf_backend_gc_sweep_hook	elf32_arc_gc_sweep_hook
 
-#define elf_backend_can_gc_sections	0
+#define elf_backend_can_gc_sections	1
 #define elf_backend_want_got_plt	1
 #define elf_backend_plt_readonly	1
 #define elf_backend_rela_plts_and_copies_p 1
