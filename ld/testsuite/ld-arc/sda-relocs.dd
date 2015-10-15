@@ -1,0 +1,22 @@
+
+.*:     file format .*
+architecture: HS, flags 0x00000113:
+HAS_RELOC, EXEC_P, HAS_SYMS, D_PAGED
+start address 0x00010000
+
+
+Disassembly of section .text:
+
+[0-9a-f]+ <__SDATA_BEGIN__>:
+   [0-9a-f]+:	c80c                	ld_s	r0,\[gp,[0-9]+\]
+   [0-9a-f]+:	cc18                	ld(h|w)_s	r0,\[gp,[0-9]+\]
+   [0-9a-f]+:	ca30                	ldb_s	r0,\[gp,[0-9]+\]
+   [0-9a-f]+:	120c 3600           	ld.as	r0,\[gp,[0-9]+\]
+   [0-9a-f]+:	1a30 3018           	st.as	r0,\[gp,[0-9]+\]
+   [0-9a-f]+:	1230 3000           	ld	r0,\[gp,[0-9]+\]
+   [0-9a-f]+:	1230 3080           	ldb	r0,\[gp,[0-9]+\]
+   [0-9a-f]+:	1230 3100           	ld(h|w)	r0,\[gp,[0-9]+\]
+   [0-9a-f]+:	1a30 301c           	sth.as	r0,\[gp,[0-9]+\]
+   [0-9a-f]+:	5024                	ld_s	r1,\[gp,[0-9]+\]
+   [0-9a-f]+:	5034                	st_s	r0,\[gp,[0-9]+\]
+   [0-9a-f]+:	78e0                	nop_s
