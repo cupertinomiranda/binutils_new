@@ -229,9 +229,8 @@ static struct reloc_howto_struct elf_arc_howto_table[] =
 static void arc_elf_howto_init (void)
 {
 #define ARC_RELOC_HOWTO(TYPE, VALUE, SIZE, BITSIZE, RELOC_FUNCTION, OVERFLOW, FORMULA) \
-  elf_arc_howto_table[TYPE].pc_relative =
-    (strstr (#FORMULA, " P ") != NULL 
-     || strstr (#FORMULA, " PDATA ") != NULL);
+  elf_arc_howto_table[TYPE].pc_relative = \
+    (strstr (#FORMULA, " P ") != NULL || strstr (#FORMULA, " PDATA ") != NULL);
 
   #include "elf/arc-reloc.def"
 }
