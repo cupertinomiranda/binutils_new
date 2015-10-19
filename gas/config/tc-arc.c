@@ -1337,6 +1337,7 @@ md_apply_fix (fixS *fixP,
     case BFD_RELOC_24:
     case BFD_RELOC_32:
     case BFD_RELOC_64:
+    case BFD_RELOC_ARC_32_PCREL:
       md_number_to_chars (fixpos, value, fixP->fx_size);
       return;
 
@@ -3070,7 +3071,7 @@ arc_check_reloc (expressionS *exp,
       && exp->X_op == O_subtract
       && exp->X_op_symbol != NULL
       && exp->X_op_symbol->bsym->section == now_seg)
-    *r_type_p = BFD_RELOC_ARC_PC32;
+    *r_type_p = BFD_RELOC_ARC_32_PCREL;
 }
 
 
