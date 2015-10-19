@@ -993,6 +993,7 @@ elf_arc_relocate_section (bfd * output_bfd,
 static struct dynamic_sections
 arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
 {
+  struct elf_link_hash_table *htab;
   static bfd	 *dynobj = NULL;
   struct dynamic_sections ds = {
 	.initialized = FALSE,
@@ -1005,6 +1006,17 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
 	.sbss = NULL,
 	.srelbss = NULL
   };
+
+  htab = elf_hash_table (info);
+  BFD_ASSERT(htab);
+
+  /* Create dynamic sections for relocatable executables so that we can
+     copy relocations.  */
+    if(! htab->dynamic_sections_created)
+    {
+      if (! _bfd_elf_link_create_dynamic_sections (abfd, info))
+	BFD_ASSERT(0);
+    }
 
   dynobj = (elf_hash_table (info))->dynobj;
   if (dynobj == NULL)
@@ -1657,6 +1669,9 @@ elf_arc_finish_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
 	      GET_SYMBOL_OR_SECTION (DT_JMPREL, NULL, ".rela.plt")
 	      GET_SYMBOL_OR_SECTION (DT_PLTRELSZ, NULL, ".rela.plt")
 	      GET_SYMBOL_OR_SECTION (DT_RELASZ, NULL, ".rela.plt")
+	      GET_SYMBOL_OR_SECTION (DT_VERSYM, NULL, ".gnu.version")
+	      GET_SYMBOL_OR_SECTION (DT_VERDEF, NULL, ".gnu.version_d")
+	      GET_SYMBOL_OR_SECTION (DT_VERNEED, NULL, ".gnu.version_r")
 	      default:
 		break;
 	    }
@@ -1693,6 +1708,9 @@ elf_arc_finish_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
 		{
 		  case DT_PLTGOT:
 		  case DT_JMPREL:
+		  case DT_VERSYM:
+		  case DT_VERDEF:
+		  case DT_VERNEED:
 		    internal_dyn.d_un.d_ptr = s->vma;
 		    do_it = TRUE;
 		    break;
@@ -1942,7 +1960,6 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
 	      && (target->flags & SEC_ALLOC) != 0)
 	    reltext_exist = TRUE;
 	}
-
     }
 
   if (ds.sdyn)
@@ -2127,7 +2144,7 @@ elf32_arc_gc_sweep_hook (bfd *                     abfd,
 #define elf_backend_finish_dynamic_sections  elf_arc_finish_dynamic_sections
 #define elf_backend_size_dynamic_sections    elf_arc_size_dynamic_sections
 
-//#define elf_backend_copy_indirect_symbol        elf32_arc_copy_indirect_symbol
+//#define elf_backend_copy_indirect_symbol     elf32_arc_copy_indirect_symbol
 
 #define elf_backend_gc_sweep_hook	elf32_arc_gc_sweep_hook
 
@@ -2141,5 +2158,37 @@ elf32_arc_gc_sweep_hook (bfd *                     abfd,
 #define elf_backend_may_use_rel_p	0
 #define elf_backend_may_use_rela_p	1
 #define elf_backend_default_use_rela_p	1
+
+const struct elf_size_info arc_elf32_size_info =
+{
+  sizeof (Elf32_External_Ehdr),
+  sizeof (Elf32_External_Phdr),
+  sizeof (Elf32_External_Shdr),
+  sizeof (Elf32_External_Rel),
+  sizeof (Elf32_External_Rela),
+  sizeof (Elf32_External_Sym),
+  sizeof (Elf32_External_Dyn),
+  sizeof (Elf_External_Note), 
+  4,
+  1,
+  32, 2,
+  ELFCLASS32, EV_CURRENT,
+  bfd_elf32_write_out_phdrs,
+  bfd_elf32_write_shdrs_and_ehdr,
+  bfd_elf32_checksum_contents,
+  bfd_elf32_write_relocs, 
+  bfd_elf32_swap_symbol_in,
+  bfd_elf32_swap_symbol_out,
+  bfd_elf32_slurp_reloc_table,
+  bfd_elf32_slurp_symbol_table,
+  bfd_elf32_swap_dyn_in,
+  bfd_elf32_swap_dyn_out,
+  bfd_elf32_swap_reloc_in,
+  bfd_elf32_swap_reloc_out,
+  bfd_elf32_swap_reloca_in,
+  bfd_elf32_swap_reloca_out
+};
+
+#define elf_backend_size_info		arc_elf32_size_info
 
 #include "elf32-target.h"
