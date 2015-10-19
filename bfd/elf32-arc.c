@@ -474,7 +474,8 @@ debug_arc_reloc (struct arc_relocation_data reloc_data)
     fprintf (stderr, "	input section is NULL\n");
 }
 
-static ATTRIBUTE_UNUSED bfd_vma get_middle_endian_relocation (bfd_vma reloc)
+static ATTRIBUTE_UNUSED bfd_vma 
+get_middle_endian_relocation (bfd_vma reloc)
 {
   bfd_vma ret =
 	      ((reloc & 0xffff0000) >> 16) |
@@ -588,8 +589,8 @@ arc_do_relocation (bfd_byte * contents, struct arc_relocation_data reloc_data)
 	  return flag;
 	}
     }
-//#undef DEBUG_ARC_RELOC
-//#define DEBUG_ARC_RELOC(A)
+#undef DEBUG_ARC_RELOC
+#define DEBUG_ARC_RELOC(A)
 
   switch (reloc_data.howto->size)
     {
