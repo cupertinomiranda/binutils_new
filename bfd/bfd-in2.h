@@ -3523,7 +3523,9 @@ pc-relative or some form of GOT-indirect relocation.  */
   BFD_RELOC_ARM_THUMB_IMM,
   BFD_RELOC_ARM_THUMB_SHIFT,
 
-/* Renesas / SuperH SH relocs.  Not all of these appear in object files.  */
+/* Renesas / SuperH SH relocs.  Not all of these appear in object files.
+
+--MARKER_ARC_RELOCS_BEGIN--  */
   BFD_RELOC_SH_PCDISP8BY2,
   BFD_RELOC_SH_PCDISP12BY2,
   BFD_RELOC_SH_IMM3,
@@ -3622,7 +3624,8 @@ pc-relative or some form of GOT-indirect relocation.  */
   BFD_RELOC_SH_GOTOFFFUNCDESC20,
   BFD_RELOC_SH_FUNCDESC,
 
-/* ARC relocs.  */
+/* ARC relocs.
+--MARKER_ARC_RELOCS_END--  */
   BFD_RELOC_ARC_NONE,
   BFD_RELOC_ARC_8,
   BFD_RELOC_ARC_16,
@@ -3664,6 +3667,7 @@ pc-relative or some form of GOT-indirect relocation.  */
   BFD_RELOC_ARC_SECTOFF_1,
   BFD_RELOC_ARC_SECTOFF_2,
   BFD_RELOC_ARC_SDA16_ST2,
+  BFD_RELOC_ARC_32_PCREL,
   BFD_RELOC_ARC_PC32,
   BFD_RELOC_ARC_GOT32,
   BFD_RELOC_ARC_GOTPC32,

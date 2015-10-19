@@ -285,6 +285,13 @@ ARC_RELOC_HOWTO(ARC_SDA16_ST2, 48, \
                 signed, \
                 ( ( ( S + A ) - _SDA_BASE_ ) >> 2 ))
 
+ARC_RELOC_HOWTO(ARC_32_PCREL, 49, \
+                2, \
+                32, \
+                replace_word32, \
+                signed, \
+                ( ( S + A ) - PDATA ))
+
 ARC_RELOC_HOWTO(ARC_PC32, 50, \
                 2, \
                 32, \

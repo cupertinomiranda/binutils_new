@@ -473,6 +473,16 @@ debug_arc_reloc (struct arc_relocation_data reloc_data)
     fprintf (stderr, "	input section is NULL\n");
 }
 
+static ATTRIBUTE_UNUSED bfd_vma get_middle_endian_relocation (bfd_vma reloc)
+{
+  bfd_vma ret =
+	      ((reloc & 0xffff0000) >> 16) |
+	      ((reloc & 0xffff) << 16);
+  return ret;
+}
+
+#define ME(RELOC) (get_middle_endian_reloction(RELOC))
+
 #define S (reloc_data.sym_value \
 	   + reloc_data.sym_section->output_offset \
 	   + reloc_data.sym_section->output_section->vma)
@@ -490,6 +500,11 @@ debug_arc_reloc (struct arc_relocation_data reloc_data)
 	    (reloc_data.input_section->output_section->vma \
 	     + reloc_data.input_section->output_offset \
 	     + (reloc_data.reloc_offset - (bitsize >= 32 ? 4 : 0)) \
+	    ) & ~0x3)
+#define PDATA ( \
+	    (reloc_data.input_section->output_section->vma \
+	     + reloc_data.input_section->output_offset \
+	     + (reloc_data.reloc_offset) \
 	    ) & ~0x3)
 #define SECTSTAR (reloc_data.input_section->output_offset)
 #define SECTSTART (reloc_data.input_section->output_offset)
@@ -572,8 +587,8 @@ arc_do_relocation (bfd_byte * contents, struct arc_relocation_data reloc_data)
 	  return flag;
 	}
     }
-#undef DEBUG_ARC_RELOC
-#define DEBUG_ARC_RELOC(A)
+//#undef DEBUG_ARC_RELOC
+//#define DEBUG_ARC_RELOC(A)
 
   switch (reloc_data.howto->size)
     {
