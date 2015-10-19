@@ -720,7 +720,7 @@ tokenize_arguments (char *str,
 
 	  *input_line_pointer = c;
 	  SKIP_WHITESPACE_AFTER_NAME ();
- 	  /* Extra check for TLS: base.  */
+	  /* Extra check for TLS: base.  */
 	  if (*input_line_pointer == '@')
 	    {
 	      symbolS *base;
@@ -1278,45 +1278,46 @@ md_apply_fix (fixS *fixP,
 	    bfd_get_reloc_code_name (fixP->fx_r_type), value,
 	    fixP->fx_offset);
 
+
+  /* Now check for TLS relocations.  */
+  reloc = fixP->fx_r_type;
+  switch (reloc)
+    {
+    case BFD_RELOC_ARC_TLS_DTPOFF:
+    case BFD_RELOC_ARC_TLS_LE_32:
+      fixP->fx_offset = 0;
+      /* Fall through.  */
+    case BFD_RELOC_ARC_TLS_GD_GOT:
+    case BFD_RELOC_ARC_TLS_IE_GOT:
+      S_SET_THREAD_LOCAL (fixP->fx_addsy);
+      break;
+
+    case BFD_RELOC_ARC_TLS_GD_LD:
+      gas_assert (!fixP->fx_offset);
+      if (fixP->fx_subsy)
+	fixP->fx_offset
+	  = (S_GET_VALUE (fixP->fx_subsy)
+	     - fixP->fx_frag->fr_address- fixP->fx_where);
+      fixP->fx_subsy = NULL;
+      /* Fall through.  */
+    case BFD_RELOC_ARC_TLS_GD_CALL:
+      /* These two relocs are there just to allow ld to change the tls
+	 model for this symbol, by patching the code.  The offset -
+	 and scale, if any - will be installed by the linker.  */
+      S_SET_THREAD_LOCAL (fixP->fx_addsy);
+      break;
+
+    case BFD_RELOC_ARC_TLS_LE_S9:
+    case BFD_RELOC_ARC_TLS_DTPOFF_S9:
+      as_bad (_("TLS_*_S9 relocs are not supported yet"));
+      break;
+
+    default:
+      break;
+    }
+
   if (!fixP->fx_done)
     {
-      /* TLS */
-      reloc = fixP->fx_r_type;
-      switch (reloc)
-	{
-	case BFD_RELOC_ARC_TLS_DTPOFF:
-	case BFD_RELOC_ARC_TLS_LE_32:
-	  fixP->fx_offset = 0;
-	  /* Fall through.  */
-	case BFD_RELOC_ARC_TLS_GD_GOT:
-	case BFD_RELOC_ARC_TLS_IE_GOT:
-	  S_SET_THREAD_LOCAL (fixP->fx_addsy);
-	  break;
-
-	case BFD_RELOC_ARC_TLS_GD_LD:
-	  gas_assert (!fixP->fx_offset);
-	  if (fixP->fx_subsy)
-	    fixP->fx_offset
-	      = (S_GET_VALUE (fixP->fx_subsy)
-		 - fixP->fx_frag->fr_address- fixP->fx_where);
-	  fixP->fx_subsy = NULL;
-	  /* Fall through.  */
-	case BFD_RELOC_ARC_TLS_GD_CALL:
-	  /* These two relocs are there just to allow ld to change the tls
-	     model for this symbol, by patching the code.  */
-	  /* The offset - and scale, if any - will be installed by the
-	     linker.  */
-	  S_SET_THREAD_LOCAL (fixP->fx_addsy);
-	  break;
-
-	case BFD_RELOC_ARC_TLS_LE_S9:
-	case BFD_RELOC_ARC_TLS_DTPOFF_S9:
-	  as_bad (_("TLS_*_S9 relocs are not supported yet"));
-	  break;
-
-	default:
-	  break;
-	}
       return;
     }
 
