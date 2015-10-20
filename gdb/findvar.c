@@ -737,16 +737,31 @@ default_read_var_value (struct symbol *var, const struct block *var_block,
 	   symbol_objfile (var));
 	msym = lookup_data.result.minsym;
 
+	/* If we can't find the minsym there's a problem in the symbol info.
+	   The symbol exists in the debug info, but it's missing in the minsym
+	   table.  */
 	if (msym == NULL)
-	  error (_("No global symbol \"%s\"."), SYMBOL_LINKAGE_NAME (var));
-	if (overlay_debugging)
-	  addr = symbol_overlayed_address (BMSYMBOL_VALUE_ADDRESS (lookup_data.result),
-					   MSYMBOL_OBJ_SECTION (lookup_data.result.objfile,
-								msym));
-	else
-	  addr = BMSYMBOL_VALUE_ADDRESS (lookup_data.result);
+	  {
+	    const char *flavour_name
+	      = objfile_flavour_name (symbol_objfile (var));
 
+	    /* We can't get here unless we've opened the file, so flavour_name
+	       can't be NULL.  */
+	    gdb_assert (flavour_name != NULL);
+	    error (_("Missing %s symbol \"%s\"."),
+		   flavour_name, SYMBOL_LINKAGE_NAME (var));
+	  }
 	obj_section = MSYMBOL_OBJ_SECTION (lookup_data.result.objfile, msym);
+	/* Relocate address, unless there is no section or the variable is
+	   a TLS variable. */
+	if (obj_section == NULL
+	    || (obj_section->the_bfd_section->flags & SEC_THREAD_LOCAL) != 0)
+	   addr = MSYMBOL_VALUE_RAW_ADDRESS (msym);
+	else
+	   addr = BMSYMBOL_VALUE_ADDRESS (lookup_data.result);
+	if (overlay_debugging)
+	  addr = symbol_overlayed_address (addr, obj_section);
+	/* Determine address of TLS variable. */
 	if (obj_section
 	    && (obj_section->the_bfd_section->flags & SEC_THREAD_LOCAL) != 0)
 	  addr = target_translate_tls_address (obj_section->objfile, addr);
@@ -924,7 +939,7 @@ address_from_register (int regnum, struct frame_info *frame)
      pointer types.  Avoid constructing a value object in those cases.  */
   if (gdbarch_convert_register_p (gdbarch, regnum, type))
     {
-      gdb_byte *buf = alloca (TYPE_LENGTH (type));
+      gdb_byte *buf = (gdb_byte *) alloca (TYPE_LENGTH (type));
       int optim, unavail, ok;
 
       ok = gdbarch_register_to_value (gdbarch, frame, regnum, type,

@@ -1527,6 +1527,12 @@ elf_s390_gc_sweep_hook (bfd *abfd,
 	    elf_s390_hash_table (info)->tls_ldm_got.refcount -= 1;
 	  break;
 
+	case R_390_GOTOFF16:
+	case R_390_GOTOFF32:
+	case R_390_GOTPC:
+	case R_390_GOTPCDBL:
+	  break;
+
 	case R_390_TLS_GD32:
 	case R_390_TLS_IE32:
 	case R_390_TLS_GOTIE12:
@@ -1537,10 +1543,6 @@ elf_s390_gc_sweep_hook (bfd *abfd,
 	case R_390_GOT16:
 	case R_390_GOT20:
 	case R_390_GOT32:
-	case R_390_GOTOFF16:
-	case R_390_GOTOFF32:
-	case R_390_GOTPC:
-	case R_390_GOTPCDBL:
 	case R_390_GOTENT:
 	  if (h != NULL)
 	    {
@@ -2039,7 +2041,7 @@ elf_s390_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
   if (htab->elf.dynamic_sections_created)
     {
       /* Set the contents of the .interp section to the interpreter.  */
-      if (bfd_link_executable (info))
+      if (bfd_link_executable (info) && !info->nointerp)
 	{
 	  s = bfd_get_linker_section (dynobj, ".interp");
 	  if (s == NULL)

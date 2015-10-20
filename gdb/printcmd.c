@@ -346,7 +346,7 @@ float_type_from_length (struct type *type)
    supported at this level.  */
 
 void
-print_scalar_formatted (const void *valaddr, struct type *type,
+print_scalar_formatted (const gdb_byte *valaddr, struct type *type,
 			const struct value_print_options *options,
 			int size, struct ui_file *stream)
 {
@@ -1376,16 +1376,19 @@ address_info (char *exp, int from_tty)
 	else
 	  {
 	    section = MSYMBOL_OBJ_SECTION (msym.objfile, msym.minsym);
-	    load_addr = BMSYMBOL_VALUE_ADDRESS (msym);
 
 	    if (section
 		&& (section->the_bfd_section->flags & SEC_THREAD_LOCAL) != 0)
-	      printf_filtered (_("a thread-local variable at offset %s "
-				 "in the thread-local storage for `%s'"),
-			       paddress (gdbarch, load_addr),
-			       objfile_name (section->objfile));
+	      {
+		load_addr = MSYMBOL_VALUE_RAW_ADDRESS (msym.minsym);
+		printf_filtered (_("a thread-local variable at offset %s "
+				   "in the thread-local storage for `%s'"),
+				 paddress (gdbarch, load_addr),
+				 objfile_name (section->objfile));
+	      }
 	    else
 	      {
+		load_addr = BMSYMBOL_VALUE_ADDRESS (msym);
 		printf_filtered (_("static storage at address "));
 		fputs_filtered (paddress (gdbarch, load_addr), gdb_stdout);
 		if (section_is_overlay (section))
@@ -2061,7 +2064,7 @@ printf_wide_c_string (struct ui_file *stream, const char *format,
   struct type *wctype = lookup_typename (current_language, gdbarch,
 					 "wchar_t", NULL, 0);
   int wcwidth = TYPE_LENGTH (wctype);
-  gdb_byte *buf = alloca (wcwidth);
+  gdb_byte *buf = (gdb_byte *) alloca (wcwidth);
   struct obstack output;
   struct cleanup *inner_cleanup;
 
@@ -2200,7 +2203,7 @@ printf_pointer (struct ui_file *stream, const char *format,
   long val = value_as_long (value);
 #endif
 
-  fmt = alloca (strlen (format) + 5);
+  fmt = (char *) alloca (strlen (format) + 5);
 
   /* Copy up to the leading %.  */
   p = format;

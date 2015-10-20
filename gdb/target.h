@@ -122,15 +122,8 @@ enum inferior_event_type
     /* Process a normal inferior event which will result in target_wait
        being called.  */
     INF_REG_EVENT,
-    /* We are called because a timer went off.  */
-    INF_TIMER,
     /* We are called to do stuff after the inferior stops.  */
     INF_EXEC_COMPLETE,
-    /* We are called to do some stuff after the inferior stops, but we
-       are expected to reenter the proceed() and
-       handle_inferior_event() functions.  This is used only in case of
-       'step n' like commands.  */
-    INF_EXEC_CONTINUE
   };
 
 /* Target objects which can be transfered using target_read,
@@ -471,7 +464,7 @@ struct target_ops
     ptid_t (*to_wait) (struct target_ops *,
 		       ptid_t, struct target_waitstatus *,
 		       int TARGET_DEBUG_PRINTER (target_debug_print_options))
-      TARGET_DEFAULT_NORETURN (noprocess ());
+      TARGET_DEFAULT_FUNC (default_target_wait);
     void (*to_fetch_registers) (struct target_ops *, struct regcache *, int)
       TARGET_DEFAULT_IGNORE ();
     void (*to_store_registers) (struct target_ops *, struct regcache *, int)
@@ -566,6 +559,12 @@ struct target_ops
     int (*to_masked_watch_num_registers) (struct target_ops *,
 					  CORE_ADDR, CORE_ADDR)
       TARGET_DEFAULT_RETURN (-1);
+
+    /* Return 1 for sure target can do single step.  Return -1 for
+       unknown.  Return 0 for target can't do.  */
+    int (*to_can_do_single_step) (struct target_ops *)
+      TARGET_DEFAULT_RETURN (-1);
+
     void (*to_terminal_init) (struct target_ops *)
       TARGET_DEFAULT_IGNORE ();
     void (*to_terminal_inferior) (struct target_ops *)
@@ -603,6 +602,8 @@ struct target_ops
       TARGET_DEFAULT_RETURN (1);
     int (*to_remove_exec_catchpoint) (struct target_ops *, int)
       TARGET_DEFAULT_RETURN (1);
+    void (*to_follow_exec) (struct target_ops *, struct inferior *, char *)
+      TARGET_DEFAULT_IGNORE ();
     int (*to_set_syscall_catchpoint) (struct target_ops *,
 				      int, int, int, int, int *)
       TARGET_DEFAULT_RETURN (1);
@@ -1152,9 +1153,18 @@ struct target_ops
     void (*to_delete_record) (struct target_ops *)
       TARGET_DEFAULT_NORETURN (tcomplain ());
 
-    /* Query if the record target is currently replaying.  */
-    int (*to_record_is_replaying) (struct target_ops *)
+    /* Query if the record target is currently replaying PTID.  */
+    int (*to_record_is_replaying) (struct target_ops *, ptid_t ptid)
       TARGET_DEFAULT_RETURN (0);
+
+    /* Query if the record target will replay PTID if it were resumed in
+       execution direction DIR.  */
+    int (*to_record_will_replay) (struct target_ops *, ptid_t ptid, int dir)
+      TARGET_DEFAULT_RETURN (0);
+
+    /* Stop replaying.  */
+    void (*to_record_stop_replaying) (struct target_ops *)
+      TARGET_DEFAULT_IGNORE ();
 
     /* Go to the begin of the execution trace.  */
     void (*to_goto_record_begin) (struct target_ops *)
@@ -1326,6 +1336,13 @@ extern void target_resume (ptid_t ptid, int step, enum gdb_signal signal);
 
 extern ptid_t target_wait (ptid_t ptid, struct target_waitstatus *status,
 			   int options);
+
+/* The default target_ops::to_wait implementation.  */
+
+extern ptid_t default_target_wait (struct target_ops *ops,
+				   ptid_t ptid,
+				   struct target_waitstatus *status,
+				   int options);
 
 /* Fetch at least register REGNO, or all regs if regno == -1.  No result.  */
 
@@ -1576,6 +1593,11 @@ extern void target_load (const char *arg, int from_tty);
    (i.e. there is another event pending).  */
 
 int target_follow_fork (int follow_child, int detach_fork);
+
+/* Handle the target-specific bookkeeping required when the inferior
+   makes an exec call.  INF is the exec'd inferior.  */
+
+void target_follow_exec (struct inferior *inf, char *execd_pathname);
 
 /* On some targets, we can catch an inferior exec event when it
    occurs.  These functions insert/remove an already-created
@@ -1902,6 +1924,9 @@ extern char *target_thread_name (struct thread_info *);
     (*current_target.to_region_ok_for_hw_watchpoint) (&current_target,	\
 						      addr, len)
 
+
+#define target_can_do_single_step() \
+  (*current_target.to_can_do_single_step) (&current_target)
 
 /* Set/clear a hardware watchpoint starting at ADDR, for LEN bytes.
    TYPE is 0 for write, 1 for read, and 2 for read/write accesses.
@@ -2424,7 +2449,13 @@ extern int target_supports_delete_record (void);
 extern void target_delete_record (void);
 
 /* See to_record_is_replaying in struct target_ops.  */
-extern int target_record_is_replaying (void);
+extern int target_record_is_replaying (ptid_t ptid);
+
+/* See to_record_will_replay in struct target_ops.  */
+extern int target_record_will_replay (ptid_t ptid, int dir);
+
+/* See to_record_stop_replaying in struct target_ops.  */
+extern void target_record_stop_replaying (void);
 
 /* See to_goto_record_begin in struct target_ops.  */
 extern void target_goto_record_begin (void);

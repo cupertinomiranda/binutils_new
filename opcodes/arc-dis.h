@@ -64,9 +64,10 @@ struct arcDisState
 
   unsigned char* instruction;
   unsigned index;
-  const char *comm[6]; /* instr name, cond, NOP, 3 operands  */
+  const char *comm[6]; /* Instr name, cond, NOP, 3 operands.  */
 
-  union {
+  union
+  {
     unsigned int registerNum;
     unsigned int shortimm;
     unsigned int longimm;
@@ -100,6 +101,5 @@ struct arcDisState
 };
 
 struct arcDisState
-arcAnalyzeInstr (bfd_vma memaddr,
-		 struct disassemble_info *info);
+arcAnalyzeInstr (bfd_vma memaddr, struct disassemble_info *);
 #endif

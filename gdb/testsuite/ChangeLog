@@ -1,3 +1,282 @@
+2015-10-12  Andrew Burgess  <andrew.burgess@embecosm.com>
+
+	* gdb.base/dbx.exp (test_func): Remove xfails, update expected
+	results.
+
+2015-10-12  Yao Qi  <yao.qi@linaro.org>
+
+	* gdb.arch/disp-step-insn-reloc.exp: New test case.
+
+2015-10-12  Yao Qi  <yao.qi@linaro.org>
+
+	* lib/gdb.exp (support_displaced_stepping): Return 1 if target
+	is aarch64*-*-linux*.
+
+2015-10-12  Yao Qi  <yao.qi@linaro.org>
+
+	* gdb.arch/insn-reloc.c (can_relocate_bcond): Rename to ...
+	(can_relocate_bcond_true): ... it.
+	(can_relocate_bcond_false): New function.
+	(foo): Likewise.
+	(can_relocate_bl): Likewise.
+	(testcases) [__aarch64__]: Add can_relocate_bcond_false and
+	can_relocate_bl.
+
+2015-10-12  Pierre-Marie de Rodat  <derodat@adacore.com>
+
+	* gdb.base/nested-addr.c: New file.
+	* gdb.base/nested-addr.exp: New testcase.
+
+2015-10-09  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/vdso.c (main): Remove breakpoint markers.
+	* gdb.btrace/vdso.exp: Change stepping command to "next" and ignore
+	its output.  Ignore the output of "record goto begin" and instead
+	check that GDB is replaying.
+
+2015-10-09  Pedro Alves  <palves@redhat.com>
+
+	* gdb.base/a2-run.exp (maybe_exp_continue): New procedure.
+	(top level): Use it in the run with no args test.
+
+2015-10-08  Iain Buclaw  <ibuclaw@gdcproject.org>
+
+	* gdb.dlang/properties.exp: New file.
+
+2015-10-02  Sandra Loosemore  <sandra@codesourcery.com>
+
+	* gdb.dwarf2/staticvirtual.exp: Generalize regexp so it can match
+	whether or not address 0x1000 is mapped on the target.
+
+2015-09-30  Simon Marchi  <simon.marchi@ericsson.com>
+
+	* gdb.python/py-type.exp: Do not run tests if binaries fail to
+	build.
+
+2015-09-30  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/tsx.exp: Consider multiple correct outputs in the record
+	instruction-history test.
+
+2015-09-28  Doug Evans  <dje@google.com>
+
+	* gdb.base/gcore.c (array_func): Add reference to static_array.
+
+2015-09-25  Simon Marchi  <simon.marchi@ericsson.com>
+
+	* gdb.gdb/selftest.exp (do_steps_and_nexts): Adjust expected
+	source line.
+
+2015-09-24 Sandra Loosemore <sandra@codesourcery.com>
+
+	* gdb.cp/classes.exp (test_enums): Generalize regexp to allow
+	short or char as base type.
+
+2015-09-23 Sandra Loosemore <sandra@codesourcery.com>
+
+	* gdb.cp/var-tag.exp (do_global_tests): Generalize opt_underlying
+	to allow any size enum.
+
+2015-09-23  Pierre-Marie de Rodat  <derodat@adacore.com>
+
+	* gdb.ada/array_ptr_renaming.exp: New testcase.
+	* gdb.ada/array_ptr_renaming/foo.adb: New file.
+	* gdb.ada/array_ptr_renaming/pack.ads: New file.
+
+2015-09-21  Pierre Langlois  <pierre.langlois@arm.com>
+
+	* gdb.trace/ftrace-lock.c: New file.
+	* gdb.trace/ftrace-lock.exp: New file.
+
+2015-09-21  Pierre Langlois  <pierre.langlois@arm.com>
+
+	* gdb.arch/insn-reloc.c: New file.
+	* gdb.arch/ftrace-insn-reloc.exp: New file.
+
+2015-09-21  Pierre Langlois  <pierre.langlois@arm.com>
+
+	* gdb.trace/change-loc.h (func4) [__aarch64__]: Add a nop
+	instruction.
+	* gdb.trace/pendshr1.c (pendfunc): Likewise.
+	* gdb.trace/pendshr2.c (pendfunc2): Likewise.
+	* gdb.trace/range-stepping.c: Likewise.
+	* gdb.trace/trace-break.c: Likewise.
+	* gdb.trace/trace-mt.c (thread_function): Likewise.
+	* gdb.trace/ftrace.c (marker): Likewise.
+	* gdb.trace/trace-condition.c (marker): Likewise.
+	* gdb.trace/ftrace.exp: Enable ftrace test if is_aarch64_target.
+	* gdb.trace/trace-condition.exp: Set pcreg to "\$pc" if
+	is_aarch64_target.
+
+2015-09-18  Doug Evans  <xdje42@gmail.com>
+
+	* gdb.dwarf2/dw2-bad-unresolved.c: New file.
+	* gdb.dwarf2/dw2-bad-unresolved.exp: New file.
+
+2015-09-18  Sandra Loosemore  <sandra@codesourcery.com>
+
+	* gdb.base/dso2dso.exp: Don't use directory prefix when setting
+	the breakpoint.
+
+2015-09-18  Sandra Loosemore  <sandra@codesourcery.com>
+
+	* gdb.mi/mi-pending.exp: Don't use directory prefix when setting
+	the pending breakpoint.  Remove timeout override for "Run till
+	MI pending breakpoint on pendfunc3 on thread 2" test.
+
+2015-09-18  Sandra Loosemore  <sandra@codesourcery.com>
+
+	* gdb.mi/mi-cli.exp: Don't require directory prefix in breakpoint
+	filename pattern.
+
+2015-09-18  Sandra Loosemore  <sandra@codesourcery.com>
+
+	* gdb.mi/mi-dprintf-pending.exp: Don't require directory prefix
+	in breakpoint filename pattern.
+
+2015-09-18  Sandra Loosemore  <sandra@codesourcery.com>
+
+	* gdb.base/global-var-nested-by-dso.exp: Call gdb_load_shlibs.
+
+2015-09-18  Sandra Loosemore  <sandra@codesourcery.com>
+
+	* gdb.linespec/explicit.exp: Check for readline support for
+	tab-completion tests.  Fix obvious typo.
+
+2015-09-18  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/multi-thread-step.exp: Test scheduler-locking on, step,
+	and replay.
+
+2015-09-18  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/non-stop.c: New.
+	* gdb.btrace/non-stop.exp: New.
+
+2015-09-17  Pierre Langlois  <pierre.langlois@arm.com>
+	    Yao Qi  <yao.qi@linaro.org>
+
+	* gdb.trace/trace-condition.c: New file.
+	* gdb.trace/trace-condition.exp: New file.
+
+2015-09-16  Wei-cheng Wang  <cole945@gmail.com>
+
+	* gdb.trace/ftrace.exp: (test_ftrace_condition) New function
+	for testing bytecode compilation.
+
+2015-09-16  Pedro Alves  <palves@redhat.com>
+	    Sandra Loosemore <sandra@codesourcery.com>
+
+	* gdb.threads/non-stop-fair-events.c (timeout): New global.
+	(SECONDS): Redefine.
+	(main): Call pthread_kill and alarm early.
+	* gdb.threads/non-stop-fair-events.exp: Probe displaced stepping
+	support.
+	(test): If the target can't hardware step and doesn't support
+	displaced stepping, increase the timeout.
+
+2015-09-16  Pedro Alves  <palves@redhat.com>
+
+	* gdb.threads/non-stop-fair-events.exp (gdb_test_no_anchor)
+	(enable_debug): New procedures.
+	(test): Use them.  Bail out if waiting for threads fails.
+	(top level): Bail out if a test fails.
+
+2015-09-16  Yao Qi  <yao.qi@linaro.org>
+
+	* gdb.asm/asm-source.exp: Set asm-arch for
+	aarch64*-*-* target.
+	* gdb.asm/aarch64.inc: New file.
+
+2015-09-15  Pierre-Marie de Rodat  <derodat@adacore.com>
+
+	* gdb.ada/array_of_variable_length.exp: New testcase.
+	* gdb.ada/array_of_variable_length/foo.adb: New file.
+	* gdb.ada/array_of_variable_length/pck.adb: New file.
+	* gdb.ada/array_of_variable_length/pck.ads: New file.
+
+2015-09-15  Doug Evans  <dje@google.com>
+
+	* gdb.base/callfuncs.exp (do_function_calls): Handle clang naming
+	of function static local variable.
+
+2015-09-15  Philippe Waroquiers  <philippe.waroquiers@skynet.be>
+
+	* gdb.threads/tls-so_extern.exp: New test file.
+	* gdb.threads/tls-so_extern.c: New test file.
+	* gdb.threads/tls-so_extern_main.c: New test file.
+
+2015-09-15  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.opt/solib-intra-step-lib.c: New file.
+	* gdb.opt/solib-intra-step-main.c: New file.
+	* gdb.opt/solib-intra-step.exp: New file.
+
+2015-09-15  Pedro Alves  <palves@redhat.com>
+
+	* gdb.threads/non-ldr-exc-3.exp (do_test): Use
+	gdb_continue_to_breakpoint instead of gdb_test_multiple.
+
+2015-09-14  Pedro Alves  <palves@redhat.com>
+
+	* gdb.base/hook-stop-continue.c: Delete.
+	* gdb.base/hook-stop-continue.exp: Delete.
+	* gdb.base/hook-stop-frame.c: Delete.
+	* gdb.base/hook-stop-frame.exp: Delete.
+	* gdb.base/hook-stop.c: New file.
+	* gdb.base/hook-stop.exp: New file.
+
+2015-09-14  Pierre-Marie de Rodat  <derodat@adacore.com>
+
+	* gdb.ada/access_to_packed_array.exp: New testcase.
+	* gdb.ada/access_to_packed_array/foo.adb: New file.
+	* gdb.ada/access_to_packed_array/pack.adb: New file.
+	* gdb.ada/access_to_packed_array/pack.ads: New file.
+
+2015-09-14  Markus Metzger  <markus.t.metzger@intel.com>
+
+	* gdb.btrace/buffer-size.exp: Remove recording with unlimited BTS
+	buffer size test.
+
+2015-09-11  Don Breazeal  <donb@codesourcery.com>
+
+	* gdb.base/foll-exec.c: Add copyright header.  Fix
+	formatting issues.
+	* gdb.base/foll-exec.exp (zap_session): Delete proc.
+	(do_exec_tests): Use clean_restart in place of zap_session,
+	and for test initialization.  Fix formatting issues.  Use
+	fail in place of perror.
+	* gdb.base/pie-execl.exp (main): Use 'inferior_spawn_id' in
+	an expect statement to match an expression with output from
+	the program under debug.
+	* gdb.threads/non-ldr-exc-1.exp (do_test, main): Add
+	non-stop tests and use save_vars to enable non-stop in GDBFLAGS.
+	* gdb.threads/non-ldr-exc-2.exp: Likewise.
+	* gdb.threads/non-ldr-exc-3.exp: Likewise.
+	* gdb.threads/non-ldr-exc-4.exp: Likewise.
+
+2015-09-09  Doug Evans  <dje@google.com>
+
+	* gdb.python/py-prettyprint.exp: Check result of run_lang_tests.
+
+2015-09-09  Doug Evans  <dje@google.com>
+
+	* gdb.base/pie-execl.exp: Fix result test of build_executable.
+
+2015-09-09  Doug Evans  <dje@google.com>
+
+	* gdb.base/savedregs.exp: Fix typo.
+
+2015-09-09  Pedro Alves  <palves@redhat.com>
+
+	* gdb.mi/mi-cli.exp: Add CLI finish tests.
+
+2015-09-08  Sandra Loosemore  <sandra@codesourcery.com>
+
+	* gdb.threads/hand-call-in-threads.exp: Make sure the thread
+	command actually switches threads.  Give up on remaining
+	tests if target fails to stop at breakpoint.
+
 2015-09-03  Pierre-Marie de Rodat  <derodat@adacore.com>
 
 	* gdb.ada/funcall_char.exp: New testcase.

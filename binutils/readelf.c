@@ -164,6 +164,12 @@
 #define offsetof(TYPE, MEMBER) ((size_t) &(((TYPE *) 0)->MEMBER))
 #endif
 
+typedef struct elf_section_list
+{
+  Elf_Internal_Shdr * hdr;
+  struct elf_section_list * next;
+} elf_section_list;
+
 char * program_name = "readelf";
 static unsigned long archive_file_offset;
 static unsigned long archive_file_size;
@@ -188,7 +194,7 @@ static Elf_Internal_Ehdr elf_header;
 static Elf_Internal_Shdr * section_headers;
 static Elf_Internal_Phdr * program_headers;
 static Elf_Internal_Dyn *  dynamic_section;
-static Elf_Internal_Shdr * symtab_shndx_hdr;
+static elf_section_list * symtab_shndx_list;
 static int show_name;
 static int do_dynamic;
 static int do_syms;
@@ -723,8 +729,8 @@ guess_is_rela (unsigned int e_machine)
     case EM_ALPHA:
     case EM_ALTERA_NIOS2:
     case EM_ARC:
-    case EM_ARCOMPACT:
-    case EM_ARCV2:
+    case EM_ARC_COMPACT:
+    case EM_ARC_COMPACT2:
     case EM_AVR:
     case EM_AVR_OLD:
     case EM_BLACKFIN:
@@ -1312,8 +1318,8 @@ dump_relocations (FILE * file,
 	  break;
 
 	case EM_ARC:
-	case EM_ARCOMPACT:
-	case EM_ARCV2:
+	case EM_ARC_COMPACT:
+	case EM_ARC_COMPACT2:
 	  rtype = elf_arc_reloc_type (type);
 	  break;
 
@@ -2114,8 +2120,8 @@ get_machine_name (unsigned e_machine)
     case EM_SPARCV9:		return "Sparc v9";
     case EM_TRICORE:		return "Siemens Tricore";
     case EM_ARC:		return "ARC";
-    case EM_ARCOMPACT:		return "ARCompact";
-    case EM_ARCV2:		return "ARCv2";
+    case EM_ARC_COMPACT:	return "ARCompact";
+    case EM_ARC_COMPACT2:	return "ARCv2";
     case EM_H8_300:		return "Renesas H8/300";
     case EM_H8_300H:		return "Renesas H8/300H";
     case EM_H8S:		return "Renesas H8S";
@@ -2761,7 +2767,7 @@ get_machine_flags (unsigned e_flags, unsigned e_machine)
 	default:
 	  break;
 
-	case EM_ARCV2:
+	case EM_ARC_COMPACT2:
 	  switch (e_flags & EF_ARC_MACH_MSK)
 	    {
 	    case EF_ARC_CPU_ARCV2EM:
@@ -2784,7 +2790,7 @@ get_machine_flags (unsigned e_flags, unsigned e_machine)
 	    }
 	  break;
 
-	case EM_ARCOMPACT:
+	case EM_ARC_COMPACT:
 	  switch (e_flags & EF_ARC_MACH_MSK)
 	    {
 	    case E_ARC_MACH_ARC600:
@@ -5047,27 +5053,30 @@ get_32bit_elf_symbols (FILE * file,
   if (esyms == NULL)
     goto exit_point;
 
-  shndx = NULL;
-  if (symtab_shndx_hdr != NULL
-      && (symtab_shndx_hdr->sh_link
-	  == (unsigned long) (section - section_headers)))
-    {
-      shndx = (Elf_External_Sym_Shndx *) get_data (NULL, file,
-                                                   symtab_shndx_hdr->sh_offset,
-                                                   1, symtab_shndx_hdr->sh_size,
-                                                   _("symbol table section indicies"));
-      if (shndx == NULL)
-	goto exit_point;
-      /* PR17531: file: heap-buffer-overflow */
-      else if (symtab_shndx_hdr->sh_size / sizeof (Elf_External_Sym_Shndx) < number)
+  {
+    elf_section_list * entry;
+
+    shndx = NULL;
+    for (entry = symtab_shndx_list; entry != NULL; entry = entry->next)
+      if (entry->hdr->sh_link == (unsigned long) (section - section_headers))
 	{
-	  error (_("Index section %s has an sh_size of 0x%lx - expected 0x%lx\n"),
-		 printable_section_name (symtab_shndx_hdr),
-		 (unsigned long) symtab_shndx_hdr->sh_size,
-		 (unsigned long) section->sh_size);
-	  goto exit_point;
+	  shndx = (Elf_External_Sym_Shndx *) get_data (NULL, file,
+						       entry->hdr->sh_offset,
+						       1, entry->hdr->sh_size,
+						       _("symbol table section indicies"));
+	  if (shndx == NULL)
+	    goto exit_point;
+	  /* PR17531: file: heap-buffer-overflow */
+	  else if (entry->hdr->sh_size / sizeof (Elf_External_Sym_Shndx) < number)
+	    {
+	      error (_("Index section %s has an sh_size of 0x%lx - expected 0x%lx\n"),
+		     printable_section_name (entry->hdr),
+		     (unsigned long) entry->hdr->sh_size,
+		     (unsigned long) section->sh_size);
+	      goto exit_point;
+	    }
 	}
-    }
+  }
 
   isyms = (Elf_Internal_Sym *) cmalloc (number, sizeof (Elf_Internal_Sym));
 
@@ -5157,25 +5166,30 @@ get_64bit_elf_symbols (FILE * file,
   if (!esyms)
     goto exit_point;
 
-  if (symtab_shndx_hdr != NULL
-      && (symtab_shndx_hdr->sh_link
-	  == (unsigned long) (section - section_headers)))
-    {
-      shndx = (Elf_External_Sym_Shndx *) get_data (NULL, file,
-                                                   symtab_shndx_hdr->sh_offset,
-                                                   1, symtab_shndx_hdr->sh_size,
-                                                   _("symbol table section indicies"));
-      if (shndx == NULL)
-	goto exit_point;
-      else if (symtab_shndx_hdr->sh_size / sizeof (Elf_External_Sym_Shndx) < number)
+  {
+    elf_section_list * entry;
+
+    shndx = NULL;
+    for (entry = symtab_shndx_list; entry != NULL; entry = entry->next)
+      if (entry->hdr->sh_link == (unsigned long) (section - section_headers))
 	{
-	  error (_("Index section %s has an sh_size of 0x%lx - expected 0x%lx\n"),
-		 printable_section_name (symtab_shndx_hdr),
-		 (unsigned long) symtab_shndx_hdr->sh_size,
-		 (unsigned long) section->sh_size);
-	  goto exit_point;
+	  shndx = (Elf_External_Sym_Shndx *) get_data (NULL, file,
+						       entry->hdr->sh_offset,
+						       1, entry->hdr->sh_size,
+						       _("symbol table section indicies"));
+	  if (shndx == NULL)
+	    goto exit_point;
+	  /* PR17531: file: heap-buffer-overflow */
+	  else if (entry->hdr->sh_size / sizeof (Elf_External_Sym_Shndx) < number)
+	    {
+	      error (_("Index section %s has an sh_size of 0x%lx - expected 0x%lx\n"),
+		     printable_section_name (entry->hdr),
+		     (unsigned long) entry->hdr->sh_size,
+		     (unsigned long) section->sh_size);
+	      goto exit_point;
+	    }
 	}
-    }
+  }
 
   isyms = (Elf_Internal_Sym *) cmalloc (number, sizeof (Elf_Internal_Sym));
 
@@ -5533,7 +5547,7 @@ process_section_headers (FILE * file)
   dynamic_symbols = NULL;
   dynamic_strings = NULL;
   dynamic_syminfo = NULL;
-  symtab_shndx_hdr = NULL;
+  symtab_shndx_list = NULL;
 
   eh_addr_size = is_32bit_elf ? 4 : 8;
   switch (elf_header.e_machine)
@@ -5638,12 +5652,10 @@ process_section_headers (FILE * file)
 	}
       else if (section->sh_type == SHT_SYMTAB_SHNDX)
 	{
-	  if (symtab_shndx_hdr != NULL)
-	    {
-	      error (_("File contains multiple symtab shndx tables\n"));
-	      continue;
-	    }
-	  symtab_shndx_hdr = section;
+	  elf_section_list * entry = xmalloc (sizeof * entry);
+	  entry->hdr = section;
+	  entry->next = symtab_shndx_list;
+	  symtab_shndx_list = entry;
 	}
       else if (section->sh_type == SHT_SYMTAB)
 	CHECK_ENTSIZE (section, i, Sym);
@@ -9304,6 +9316,16 @@ process_dynamic_section (FILE * file)
 		      printf (" SINGLETON");
 		      val ^= DF_1_SINGLETON;
 		    }
+		  if (val & DF_1_STUB)
+		    {
+		      printf (" STUB");
+		      val ^= DF_1_STUB;
+		    }
+		  if (val & DF_1_PIE)
+		    {
+		      printf (" PIE");
+		      val ^= DF_1_PIE;
+		    }
 		  if (val != 0)
 		    printf (" %lx", val);
 		  puts ("");
@@ -11342,9 +11364,10 @@ is_32bit_abs_reloc (unsigned int reloc_type)
     case EM_ALPHA:
       return reloc_type == 1; /* R_ALPHA_REFLONG.  */
     case EM_ARC:
-    case EM_ARCOMPACT:
-    case EM_ARCV2:
       return reloc_type == 1; /* R_ARC_32.  */
+    case EM_ARC_COMPACT:
+    case EM_ARC_COMPACT2:
+      return reloc_type == 4; /* R_ARC_32.  */
     case EM_ARM:
       return reloc_type == 2; /* R_ARM_ABS32 */
     case EM_AVR_OLD:
@@ -11664,8 +11687,8 @@ is_16bit_abs_reloc (unsigned int reloc_type)
   switch (elf_header.e_machine)
     {
     case EM_ARC:
-    case EM_ARCOMPACT:
-    case EM_ARCV2:
+    case EM_ARC_COMPACT:
+    case EM_ARC_COMPACT2:
       return reloc_type == 2; /* R_ARC_16.  */
     case EM_AVR_OLD:
     case EM_AVR:
@@ -11738,8 +11761,8 @@ is_none_reloc (unsigned int reloc_type)
     case EM_PPC:     /* R_PPC_NONE.  */
     case EM_PPC64:   /* R_PPC64_NONE.  */
     case EM_ARC:     /* R_ARC_NONE.  */
-    case EM_ARCOMPACT: /* R_ARC_NONE.  */
-    case EM_ARCV2:   /* R_ARC_NONE.  */
+    case EM_ARC_COMPACT: /* R_ARC_NONE.  */
+    case EM_ARC_COMPACT2: /* R_ARC_NONE.  */
     case EM_ARM:     /* R_ARM_NONE.  */
     case EM_IA_64:   /* R_IA64_NONE.  */
     case EM_SH:      /* R_SH_NONE.  */

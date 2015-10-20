@@ -1772,7 +1772,15 @@ elf_i386_check_relocs (bfd *abfd,
 	      /* We may need a .plt entry if the function this reloc
 		 refers to is in a shared lib.  */
 	      h->plt.refcount += 1;
-	      if (r_type != R_386_PC32)
+	      if (r_type == R_386_PC32)
+		{
+		  /* Since something like ".long foo - ." may be used
+		     as pointer, make sure that PLT is used if foo is
+		     a function defined in a shared library.  */
+		  if ((sec->flags & SEC_CODE) == 0)
+		    h->pointer_equality_needed = 1;
+		}
+	      else
 		{
 		  h->pointer_equality_needed = 1;
 		  /* R_386_32 can be resolved at run-time.  */
@@ -2876,7 +2884,7 @@ elf_i386_size_dynamic_sections (bfd *output_bfd, struct bfd_link_info *info)
   if (htab->elf.dynamic_sections_created)
     {
       /* Set the contents of the .interp section to the interpreter.  */
-      if (bfd_link_executable (info))
+      if (bfd_link_executable (info) && !info->nointerp)
 	{
 	  s = bfd_get_linker_section (dynobj, ".interp");
 	  if (s == NULL)

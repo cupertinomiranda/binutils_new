@@ -222,10 +222,10 @@ struct arc_operand
      If this field is not NULL, then simply call it with the
      instruction value.	 It will return the value of the operand.  If
      the INVALID argument is not NULL, *INVALID will be set to
-     non-zero if this operand type can not actually be extracted from
+     TRUE if this operand type can not actually be extracted from
      this operand (i.e., the instruction does not match).  If the
      operand is valid, *INVALID will not be changed.  */
-  int (*extract) (unsigned instruction, int *invalid);
+  int (*extract) (unsigned instruction, bfd_boolean *invalid);
 };
 
 /* Elements in the table are retrieved by indexing with values from
@@ -341,11 +341,11 @@ extern const unsigned arc_num_flag_special;
 /* Relocation equivalence structure.  */
 struct arc_reloc_equiv_tab
 {
-  const char *name;	 /* String to lookup.  */
-  const char *mnemonic;  /* Extra matching condition.  */
-  unsigned flagcode;     /* Extra matching condition.  */
-  signed int oldreloc;   /* Old relocation.  */
-  signed int newreloc;   /* New relocation.  */
+  const char * name;	   /* String to lookup.  */
+  const char * mnemonic;   /* Extra matching condition.  */
+  unsigned     flagcode;   /* Extra matching condition.  */
+  signed int   oldreloc;   /* Old relocation.  */
+  signed int   newreloc;   /* New relocation.  */
 };
 
 extern const struct arc_reloc_equiv_tab arc_reloc_equiv[];

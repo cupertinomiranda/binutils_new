@@ -60,6 +60,7 @@ fragment <<EOF
 
 /* Declare functions used by various EXTRA_EM_FILEs.  */
 static void gld${EMULATION_NAME}_before_parse (void);
+static void gld${EMULATION_NAME}_after_parse (void);
 static void gld${EMULATION_NAME}_after_open (void);
 static void gld${EMULATION_NAME}_before_allocation (void);
 static void gld${EMULATION_NAME}_after_allocation (void);
@@ -102,6 +103,21 @@ gld${EMULATION_NAME}_before_parse (void)
   input_flags.dynamic = ${DYNAMIC_LINK-TRUE};
   config.has_shared = `if test -n "$GENERATE_SHLIB_SCRIPT" ; then echo TRUE ; else echo FALSE ; fi`;
   config.separate_code = `if test "x${SEPARATE_CODE}" = xyes ; then echo TRUE ; else echo FALSE ; fi`;
+}
+
+EOF
+fi
+
+if test x"$LDEMUL_AFTER_PARSE" != xgld"$EMULATION_NAME"_after_parse; then
+fragment <<EOF
+
+static void
+gld${EMULATION_NAME}_after_parse (void)
+{
+  if (bfd_link_pie (&link_info))
+    link_info.flags_1 |= (bfd_vma) DF_1_PIE;
+
+  after_parse_default ();
 }
 
 EOF
@@ -1240,12 +1256,16 @@ fragment <<EOF
 	  rp = bfd_elf_get_runpath_list (link_info.output_bfd, &link_info);
 	  for (; !found && rp != NULL; rp = rp->next)
 	    {
-	      char *tmpname = gld${EMULATION_NAME}_add_sysroot (rp->name);
+	      const char *tmpname = rp->name;
+
+	      if (IS_ABSOLUTE_PATH (tmpname))
+		tmpname = gld${EMULATION_NAME}_add_sysroot (tmpname);
 	      found = (rp->by == l->by
 		       && gld${EMULATION_NAME}_search_needed (tmpname,
 							      &n,
 							      force));
-	      free (tmpname);
+	      if (tmpname != rp->name)
+		free ((char *) tmpname);
 	    }
 	  if (found)
 	    break;
@@ -1433,6 +1453,11 @@ gld${EMULATION_NAME}_append_to_separated_string (char **to, char *op_arg)
     }
 }
 
+#if defined(__GNUC__) && GCC_VERSION < 4006
+  /* Work around a GCC uninitialized warning bug fixed in GCC 4.6.  */
+static struct bfd_link_hash_entry ehdr_start_empty;
+#endif
+
 /* This is called after the sections have been attached to output
    sections, but before any sizes or addresses have been set.  */
 
@@ -1445,7 +1470,7 @@ gld${EMULATION_NAME}_before_allocation (void)
   struct elf_link_hash_entry *ehdr_start = NULL;
 #if defined(__GNUC__) && GCC_VERSION < 4006
   /* Work around a GCC uninitialized warning bug fixed in GCC 4.6.  */
-  struct bfd_link_hash_entry ehdr_start_save = ehdr_start_save;
+  struct bfd_link_hash_entry ehdr_start_save = ehdr_start_empty;
 #else
   struct bfd_link_hash_entry ehdr_start_save;
 #endif
@@ -2451,7 +2476,7 @@ struct ld_emulation_xfer_struct ld_${EMULATION_NAME}_emulation =
   ${LDEMUL_BEFORE_PARSE-gld${EMULATION_NAME}_before_parse},
   ${LDEMUL_SYSLIB-syslib_default},
   ${LDEMUL_HLL-hll_default},
-  ${LDEMUL_AFTER_PARSE-after_parse_default},
+  ${LDEMUL_AFTER_PARSE-gld${EMULATION_NAME}_after_parse},
   ${LDEMUL_AFTER_OPEN-gld${EMULATION_NAME}_after_open},
   ${LDEMUL_AFTER_ALLOCATION-gld${EMULATION_NAME}_after_allocation},
   ${LDEMUL_SET_OUTPUT_ARCH-set_output_arch_default},

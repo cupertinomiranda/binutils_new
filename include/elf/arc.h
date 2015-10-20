@@ -32,7 +32,7 @@
   RELOC_NUMBER(R_##TYPE, VALUE)
 
 START_RELOC_NUMBERS (elf_arc_reloc_type)
-  #include "arc-reloc.def" 
+#include "arc-reloc.def"
 END_RELOC_NUMBERS (R_ARC_max)
 
 #undef ARC_RELOC_HOWTO
@@ -40,9 +40,9 @@ END_RELOC_NUMBERS (R_ARC_max)
 /* Processor specific flags for the ELF header e_flags field.  */
 
 /* Four bit ARC machine type field.  */
-#define EF_ARC_MACH_MSK		0x000000ff
-#define EF_ARC_OSABI_MSK	0x00000f00
-#define EF_ARC_ALL_MSK		(EF_ARC_MACH_MSK|EF_ARC_OSABI_MSK)
+#define EF_ARC_MACH_MSK	 0x000000ff
+#define EF_ARC_OSABI_MSK 0x00000f00
+#define EF_ARC_ALL_MSK	 (EF_ARC_MACH_MSK | EF_ARC_OSABI_MSK)
 
 /* Four bit ARC machine type field.  */
 
@@ -53,13 +53,13 @@ END_RELOC_NUMBERS (R_ARC_max)
 #define E_ARC_MACH_ARC601	0x00000004
 #define E_ARC_MACH_ARC700	0x00000003
 
-/* Processor specific flags for the ELF header e_flags field. */
+/* Processor specific flags for the ELF header e_flags field.  */
 #define EF_ARC_CPU_GENERIC      0x00000000
 #define EF_ARC_CPU_ARCV2EM      0x00000005
 #define EF_ARC_CPU_ARCV2HS      0x00000006
 
-/* ARC Linux specific ABIs */
-#define E_ARC_OSABI_ORIG	0x00000000   /* MUST be zero for back-compat */
+/* ARC Linux specific ABIs.  */
+#define E_ARC_OSABI_ORIG	0x00000000   /* MUST be 0 for back-compat.  */
 #define E_ARC_OSABI_V2		0x00000200
 #define E_ARC_OSABI_V3		0x00000300
 #define E_ARC_OSABI_CURRENT	E_ARC_OSABI_V3

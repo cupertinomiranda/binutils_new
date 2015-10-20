@@ -622,7 +622,7 @@ putpkt_binary_1 (char *buf, int cnt, int is_notif)
   char *p;
   int cc;
 
-  buf2 = xmalloc (strlen ("$") + cnt + strlen ("#nn") + 1);
+  buf2 = (char *) xmalloc (strlen ("$") + cnt + strlen ("#nn") + 1);
 
   /* Copy the packet into buffer BUF2, encapsulating it
      and giving it a checksum.  */
@@ -1117,6 +1117,8 @@ prepare_resume_reply (char *buf, ptid_t ptid,
     case TARGET_WAITKIND_STOPPED:
     case TARGET_WAITKIND_FORKED:
     case TARGET_WAITKIND_VFORKED:
+    case TARGET_WAITKIND_VFORK_DONE:
+    case TARGET_WAITKIND_EXECD:
       {
 	struct thread_info *saved_thread;
 	const char **regp;
@@ -1133,6 +1135,31 @@ prepare_resume_reply (char *buf, ptid_t ptid,
 	    buf += strlen (buf);
 	    buf = write_ptid (buf, status->value.related_pid);
 	    strcat (buf, ";");
+	  }
+	else if (status->kind == TARGET_WAITKIND_VFORK_DONE && report_vfork_events)
+	  {
+	    enum gdb_signal signal = GDB_SIGNAL_TRAP;
+
+	    sprintf (buf, "T%02xvforkdone:;", signal);
+	  }
+	else if (status->kind == TARGET_WAITKIND_EXECD && report_exec_events)
+	  {
+	    enum gdb_signal signal = GDB_SIGNAL_TRAP;
+	    const char *event = "exec";
+	    char hexified_pathname[PATH_MAX * 2];
+
+	    sprintf (buf, "T%02x%s:", signal, event);
+	    buf += strlen (buf);
+
+	    /* Encode pathname to hexified format.  */
+	    bin2hex ((const gdb_byte *) status->value.execd_pathname,
+		     hexified_pathname,
+		     strlen (status->value.execd_pathname));
+
+	    sprintf (buf, "%s;", hexified_pathname);
+	    xfree (status->value.execd_pathname);
+	    status->value.execd_pathname = NULL;
+	    buf += strlen (buf);
 	  }
 	else
 	  sprintf (buf, "T%02x", status->value.sig);
@@ -1249,16 +1276,6 @@ prepare_resume_reply (char *buf, ptid_t ptid,
       else
 	sprintf (buf, "X%02x", status->value.sig);
       break;
-    case TARGET_WAITKIND_VFORK_DONE:
-      if (report_vfork_events)
-	{
-	  enum gdb_signal signal = GDB_SIGNAL_TRAP;
-
-	  sprintf (buf, "T%02xvforkdone:;", signal);
-	}
-      else
-	sprintf (buf, "T%02x", GDB_SIGNAL_0);
-      break;
     default:
       error ("unhandled waitkind");
       break;
@@ -1308,7 +1325,7 @@ decode_M_packet (char *from, CORE_ADDR *mem_addr_ptr, unsigned int *len_ptr,
     }
 
   if (*to_p == NULL)
-    *to_p = xmalloc (*len_ptr);
+    *to_p = (unsigned char *) xmalloc (*len_ptr);
 
   hex2bin (&from[i++], *to_p, *len_ptr);
 }
@@ -1334,7 +1351,7 @@ decode_X_packet (char *from, int packet_len, CORE_ADDR *mem_addr_ptr,
     }
 
   if (*to_p == NULL)
-    *to_p = xmalloc (*len_ptr);
+    *to_p = (unsigned char *) xmalloc (*len_ptr);
 
   if (remote_unescape_input ((const gdb_byte *) &from[i], packet_len - i,
 			     *to_p, *len_ptr) != *len_ptr)
@@ -1461,7 +1478,7 @@ look_up_one_symbol (const char *name, CORE_ADDR *addrp, int may_ask_gdb)
       unsigned int mem_len;
 
       decode_m_packet (&own_buf[1], &mem_addr, &mem_len);
-      mem_buf = xmalloc (mem_len);
+      mem_buf = (unsigned char *) xmalloc (mem_len);
       if (read_inferior_memory (mem_addr, mem_buf, mem_len) == 0)
 	bin2hex (mem_buf, own_buf, mem_len);
       else
@@ -1545,7 +1562,7 @@ relocate_instruction (CORE_ADDR *to, CORE_ADDR oldloc)
       if (own_buf[0] == 'm')
 	{
 	  decode_m_packet (&own_buf[1], &mem_addr, &mem_len);
-	  mem_buf = xmalloc (mem_len);
+	  mem_buf = (unsigned char *) xmalloc (mem_len);
 	  if (read_inferior_memory (mem_addr, mem_buf, mem_len) == 0)
 	    bin2hex (mem_buf, own_buf, mem_len);
 	  else
@@ -1600,7 +1617,7 @@ void
 monitor_output (const char *msg)
 {
   int len = strlen (msg);
-  char *buf = xmalloc (len * 2 + 2);
+  char *buf = (char *) xmalloc (len * 2 + 2);
 
   buf[0] = 'O';
   bin2hex ((const gdb_byte *) msg, buf + 1, len);

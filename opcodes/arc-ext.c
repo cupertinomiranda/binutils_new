@@ -28,18 +28,11 @@
 #include "libiberty.h"
 
 
-/******************************************************************************/
-/*                                                                            */
-/* Outline:                                                                   */
-/*     This module provides support for extensions to the ARC processor       */
-/*     architecture.                                                          */
-/*                                                                            */
-/******************************************************************************/
+/* This module provides support for extensions to the ARC processor
+   architecture.  */
 
 
-/* -------------------------------------------------------------------------- */
-/*                               local constants                              */
-/* -------------------------------------------------------------------------- */
+/* Local constants.  */
 
 #define FIRST_EXTENSION_CORE_REGISTER   32
 #define LAST_EXTENSION_CORE_REGISTER    59
@@ -55,9 +48,7 @@
 #define INST_HASH_MASK    (INST_HASH_SIZE - 1)
 
 
-/* -------------------------------------------------------------------------- */
-/*                               local types                                  */
-/* -------------------------------------------------------------------------- */
+/* Local types.  */
 
 /* These types define the information stored in the table.  */
 
@@ -93,28 +84,23 @@ struct arcExtMap
 };
 
 
-/* -------------------------------------------------------------------------- */
-/*                               local data                                   */
-/* -------------------------------------------------------------------------- */
+/* Local data.  */
 
 /* Extension table.  */
 static struct arcExtMap arc_extension_map;
 
 
-/* -------------------------------------------------------------------------- */
-/*                               local macros                                 */
-/* -------------------------------------------------------------------------- */
+/* Local macros.  */
 
 /* A hash function used to map instructions into the table.  */
 #define INST_HASH(MAJOR, MINOR)    ((((MAJOR) << 3) ^ (MINOR)) & INST_HASH_MASK)
 
 
-/* -------------------------------------------------------------------------- */
-/*                               local functions                              */
-/* -------------------------------------------------------------------------- */
+/* Local functions.  */
 
-static void create_map (unsigned char *block,
-			unsigned long length)
+static void
+create_map (unsigned char *block,
+	    unsigned long length)
 {
   unsigned char *p = block;
 
@@ -133,9 +119,10 @@ static void create_map (unsigned char *block,
 	 For auxiliary regs:
 	   p[2..5] = value
 	   p[6]+   = name
-	     (value is p[2]<<24|p[3]<<16|p[4]<<8|p[5]) */
+	     (value is p[2]<<24|p[3]<<16|p[4]<<8|p[5]).  */
 
-      /* The sequence of records is temrinated by an "empty" record.  */
+      /* The sequence of records is temrinated by an "empty"
+	 record.  */
       if (p[0] == 0)
 	break;
 
@@ -149,7 +136,7 @@ static void create_map (unsigned char *block,
 	    struct ExtInstruction **bucket =
 		   &arc_extension_map.instructions[INST_HASH (major, minor)];
 
-	    insn->name  = xstrdup ((char *) (p+5));
+	    insn->name  = xstrdup ((char *) (p + 5));
 	    insn->major = major;
 	    insn->minor = minor;
 	    insn->flags = p[4];
@@ -161,7 +148,7 @@ static void create_map (unsigned char *block,
 	case EXT_CORE_REGISTER:
 	  {
 	    unsigned char number = p[2];
-	    char*         name   = (char *) p+3;
+	    char*	  name	 = (char *) (p + 3);
 
 	    arc_extension_map.
 	      coreRegisters[number - FIRST_EXTENSION_CORE_REGISTER].number
@@ -178,7 +165,7 @@ static void create_map (unsigned char *block,
 	case EXT_LONG_CORE_REGISTER:
 	  {
 	    unsigned char     number = p[2];
-	    char*             name   = (char *) p+7;
+	    char*	      name   = (char *) (p + 7);
 	    enum ExtReadWrite rw     = p[6];
 
 	    arc_extension_map.
@@ -194,7 +181,7 @@ static void create_map (unsigned char *block,
 
 	case EXT_COND_CODE:
 	  {
-	    char *cc_name = xstrdup ((char *) (p+3));
+	    char *cc_name = xstrdup ((char *) (p + 3));
 
 	    arc_extension_map.
 	      condCodes[p[2] - FIRST_EXTENSION_CONDITION_CODE]
@@ -204,14 +191,15 @@ static void create_map (unsigned char *block,
 
 	case EXT_AUX_REGISTER:
 	  {
-	    /* trickier -- need to store linked list of these.  */
+	    /* Trickier -- need to store linked list of these.  */
 	    struct ExtAuxRegister *newAuxRegister
 	      = XNEW (struct ExtAuxRegister);
-	    char *aux_name = xstrdup ((char *) (p+6));
+	    char *aux_name = xstrdup ((char *) (p + 6));
 
-	    newAuxRegister->name    = aux_name;
-	    newAuxRegister->address = p[2]<<24 | p[3]<<16 | p[4]<<8 | p[5];
-	    newAuxRegister->next    = arc_extension_map.auxRegisters;
+	    newAuxRegister->name = aux_name;
+	    newAuxRegister->address = (p[2] << 24) | (p[3] << 16)
+	      | (p[4] << 8) | p[5];
+	    newAuxRegister->next = arc_extension_map.auxRegisters;
 	    arc_extension_map.auxRegisters = newAuxRegister;
 	    break;
 	  }
@@ -227,10 +215,11 @@ static void create_map (unsigned char *block,
 
 /* Free memory that has been allocated for the extensions.  */
 
-static void destroy_map (void)
+static void
+destroy_map (void)
 {
   struct ExtAuxRegister *r;
-  unsigned int           i;
+  unsigned int		 i;
 
   /* Free auxiliary registers.  */
   r = arc_extension_map.auxRegisters;
@@ -278,27 +267,28 @@ static void destroy_map (void)
 }
 
 
-static const char* ExtReadWrite_image (enum ExtReadWrite val)
+static const char *
+ExtReadWrite_image (enum ExtReadWrite val)
 {
     switch (val)
     {
 	case REG_INVALID  : return "INVALID";
-	case REG_READ     : return "RO";
-	case REG_WRITE    : return "WO";
+	case REG_READ	  : return "RO";
+	case REG_WRITE	  : return "WO";
 	case REG_READWRITE: return "R/W";
-	default           : return "???";
+	default		  : return "???";
     }
 }
 
 
-/* -------------------------------------------------------------------------- */
-/*                               externally visible functions                 */
-/* -------------------------------------------------------------------------- */
+/* Externally visible functions.  */
 
 /* Get the name of an extension instruction.  */
 
 const char *
-arcExtMap_instName (int opcode, int insn, int *flags)
+arcExtMap_instName (int opcode,
+		    int insn,
+		    int *flags)
 {
   /* Here the following tasks need to be done.  First of all, the
      opcode stored in the Extension Map is the real opcode.  However,
@@ -386,38 +376,44 @@ arcExtMap_instName (int opcode, int insn, int *flags)
   return NULL;
 }
 
-
 /* Get the name of an extension core register.  */
+
 const char *
 arcExtMap_coreRegName (int regnum)
 {
-  if (regnum < FIRST_EXTENSION_CORE_REGISTER || regnum > LAST_EXTENSION_CONDITION_CODE)
+  if (regnum < FIRST_EXTENSION_CORE_REGISTER
+      || regnum > LAST_EXTENSION_CONDITION_CODE)
     return NULL;
-  return arc_extension_map.coreRegisters[regnum - FIRST_EXTENSION_CORE_REGISTER].name;
+  return arc_extension_map.
+    coreRegisters[regnum - FIRST_EXTENSION_CORE_REGISTER].name;
 }
 
-
 /* Get the access mode of an extension core register.  */
+
 enum ExtReadWrite
 arcExtMap_coreReadWrite (int regnum)
 {
-  if (regnum < FIRST_EXTENSION_CORE_REGISTER || regnum > LAST_EXTENSION_CONDITION_CODE)
+  if (regnum < FIRST_EXTENSION_CORE_REGISTER
+      || regnum > LAST_EXTENSION_CONDITION_CODE)
     return REG_INVALID;
-  return arc_extension_map.coreRegisters[regnum - FIRST_EXTENSION_CORE_REGISTER].rw;
+  return arc_extension_map.
+    coreRegisters[regnum - FIRST_EXTENSION_CORE_REGISTER].rw;
 }
 
-
 /* Get the name of an extension condition code.  */
+
 const char *
 arcExtMap_condCodeName (int code)
 {
-  if (code < FIRST_EXTENSION_CONDITION_CODE || code > LAST_EXTENSION_CONDITION_CODE)
+  if (code < FIRST_EXTENSION_CONDITION_CODE
+      || code > LAST_EXTENSION_CONDITION_CODE)
     return NULL;
-  return arc_extension_map.condCodes[code - FIRST_EXTENSION_CONDITION_CODE];
+  return arc_extension_map.
+    condCodes[code - FIRST_EXTENSION_CONDITION_CODE];
 }
 
-
 /* Get the name of an extension auxiliary register.  */
+
 const char *
 arcExtMap_auxRegName (long address)
 {
@@ -432,9 +428,9 @@ arcExtMap_auxRegName (long address)
   return NULL;
 }
 
+/* Load extensions described in .arcextmap and
+   .gnu.linkonce.arcextmap.* ELF section.  */
 
-/* Load extensions described in .arcextmap and .gnu.linkonce.arcextmap.* ELF
-   section.  */
 void
 build_ARC_extmap (bfd *text_bfd)
 {
@@ -464,10 +460,11 @@ build_ARC_extmap (bfd *text_bfd)
 }
 
 
-void dump_ARC_extmap (void)
+void
+dump_ARC_extmap (void)
 {
-    struct ExtAuxRegister* r;
-    int                    i;
+    struct ExtAuxRegister *r;
+    int			   i;
 
     r = arc_extension_map.auxRegisters;
 
@@ -481,7 +478,8 @@ void dump_ARC_extmap (void)
     {
 	struct ExtInstruction *insn;
 
-	for (insn = arc_extension_map.instructions[i]; insn != NULL; insn = insn->next)
+	for (insn = arc_extension_map.instructions[i];
+	     insn != NULL; insn = insn->next)
 	    printf ("INST: %d %d %x %s\n", insn->major, insn->minor,
 		    insn->flags, insn->name);
     }

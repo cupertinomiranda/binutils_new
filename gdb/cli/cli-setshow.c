@@ -373,7 +373,7 @@ do_set_command (const char *arg, int from_tty, struct cmd_list_element *c)
 	    for (i = 0; c->enums[i]; i++)
 	      msg_len += strlen (c->enums[i]) + 2;
 
-	    msg = xmalloc (msg_len);
+	    msg = (char *) xmalloc (msg_len);
 	    *msg = '\0';
 	    make_cleanup (xfree, msg);
 
@@ -523,7 +523,7 @@ do_set_command (const char *arg, int from_tty, struct cmd_list_element *c)
 	  break;
 	case var_boolean:
 	  {
-	    char *opt = *(int *) c->var ? "on" : "off";
+	    const char *opt = *(int *) c->var ? "on" : "off";
 
 	    observer_notify_command_param_changed (name, opt);
 	  }
@@ -683,7 +683,7 @@ cmd_show_list (struct cmd_list_element *list, int from_tty, const char *prefix)
 	{
 	  struct cleanup *optionlist_chain
 	    = make_cleanup_ui_out_tuple_begin_end (uiout, "optionlist");
-	  char *new_prefix = strstr (list->prefixname, "show ") + 5;
+	  const char *new_prefix = strstr (list->prefixname, "show ") + 5;
 
 	  if (ui_out_is_mi_like_p (uiout))
 	    ui_out_field_string (uiout, "prefix", new_prefix);
