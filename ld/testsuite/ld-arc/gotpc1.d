@@ -1,10 +1,10 @@
 #source: gotpc1.s
-#as: -mARC700 -mEA
+#as: -mcpu=arc700
 #ld: -q -T gotpc1.ld
 #ld_after_inputfiles: tmpdir/libdummy.so.0
 #objdump: -rd
 
-.*:     file format elf32-littlearc
+.*:     file format .*
 
 
 Disassembly of section \.text:

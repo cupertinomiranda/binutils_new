@@ -1,5 +1,5 @@
 #source: gotpc1.s
-#as: -mARC700 -mEA
+#as: -mcpu=arc700
 #ld: -q -T gotpc2.ld
 #ld_after_inputfiles: tmpdir/libdummy.so.0
 #objdump: -rd

@@ -40,7 +40,7 @@ if {[check_shared_lib_support]} {
     # some of these tests.
     set arcshared_tests {
 	{ "Build ARC700 (EA) dummy shared library"
-	    "-shared" "" "-mARC700 -mEA" {dummy-lib.s}
+	    "-shared" "" "-mcpu=arc700" {dummy-lib.s}
 	    {}
 	    "libdummy.so.0" }
 	{ "Indirect cross-library function reference (set-up)"

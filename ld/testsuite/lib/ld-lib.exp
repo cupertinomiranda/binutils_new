@@ -1706,7 +1706,7 @@ proc check_gc_sections_available { } {
 
 proc check_shared_lib_support { } {
     if {![istarget aarch64*-*-elf]
-	 && ![istarget arc-*-*]
+	 && ![istarget arc-*-elf32]
 	 && ![istarget arm*-*-elf]
 	 && ![istarget avr-*-*]
 	 && ![istarget cr16-*-*]
