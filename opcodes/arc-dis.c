@@ -82,15 +82,13 @@ special_flag_p (const char *opname,
 		const char *flgname)
 {
   const struct arc_flag_special *flg_spec;
-  size_t len;
   unsigned i, j, flgidx;
 
   for (i = 0; i < arc_num_flag_special; i++)
     {
       flg_spec = &arc_flag_special_cases[i];
-      len = strlen (flg_spec->name);
 
-      if (strncmp (opname, flg_spec->name, len) != 0)
+      if (strcmp (opname, flg_spec->name))
 	continue;
 
       /* Found potential special case instruction.  */
