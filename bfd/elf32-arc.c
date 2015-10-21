@@ -1651,7 +1651,7 @@ elf_arc_finish_dynamic_symbol (bfd * output_bfd,
   return TRUE;
 }
 
-#define GET_SYMBOL_OR_SECTION(TAG, SYMBOL, SECTION) \
+#define GET_SYMBOL_OR_SECTION(TAG, SYMBOL, SECTION, ASSERT) \
   case TAG: \
     if (SYMBOL != NULL) \
       { \
@@ -1660,7 +1660,7 @@ elf_arc_finish_dynamic_symbol (bfd * output_bfd,
     else if (SECTION != NULL) \
       { \
 	s = bfd_get_section_by_name (output_bfd, SECTION); \
-	BFD_ASSERT (s != NULL); \
+	BFD_ASSERT (s != NULL || !ASSERT); \
 	do_it = TRUE; \
       } \
     break;
@@ -1697,15 +1697,15 @@ elf_arc_finish_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
 
 	  switch (internal_dyn.d_tag)
 	    {
-	      GET_SYMBOL_OR_SECTION (DT_INIT, "_init", NULL)
-	      GET_SYMBOL_OR_SECTION (DT_FINI, "_fini", NULL)
-	      GET_SYMBOL_OR_SECTION (DT_PLTGOT, NULL, ".plt")
-	      GET_SYMBOL_OR_SECTION (DT_JMPREL, NULL, ".rela.plt")
-	      GET_SYMBOL_OR_SECTION (DT_PLTRELSZ, NULL, ".rela.plt")
-	      GET_SYMBOL_OR_SECTION (DT_RELASZ, NULL, ".rela.plt")
-	      GET_SYMBOL_OR_SECTION (DT_VERSYM, NULL, ".gnu.version")
-	      GET_SYMBOL_OR_SECTION (DT_VERDEF, NULL, ".gnu.version_d")
-	      GET_SYMBOL_OR_SECTION (DT_VERNEED, NULL, ".gnu.version_r")
+	      GET_SYMBOL_OR_SECTION (DT_INIT, "_init", NULL, TRUE)
+	      GET_SYMBOL_OR_SECTION (DT_FINI, "_fini", NULL, TRUE)
+	      GET_SYMBOL_OR_SECTION (DT_PLTGOT, NULL, ".plt", TRUE)
+	      GET_SYMBOL_OR_SECTION (DT_JMPREL, NULL, ".rela.plt", TRUE)
+	      GET_SYMBOL_OR_SECTION (DT_PLTRELSZ, NULL, ".rela.plt", TRUE)
+	      GET_SYMBOL_OR_SECTION (DT_RELASZ, NULL, ".rela.plt", FALSE)
+	      GET_SYMBOL_OR_SECTION (DT_VERSYM, NULL, ".gnu.version", TRUE)
+	      GET_SYMBOL_OR_SECTION (DT_VERDEF, NULL, ".gnu.version_d", TRUE)
+	      GET_SYMBOL_OR_SECTION (DT_VERNEED, NULL, ".gnu.version_r", TRUE)
 	      default:
 		break;
 	    }
@@ -1755,7 +1755,8 @@ elf_arc_finish_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
 		    break;
 
 		  case DT_RELASZ:
-		    internal_dyn.d_un.d_val -= s->size;
+		    if(s != NULL)
+		      internal_dyn.d_un.d_val -= s->size;
 		    do_it = TRUE;
 		    break;
 
@@ -1925,7 +1926,7 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
 	{
 	  s = bfd_get_section_by_name (dynobj, ".interp");
 	  BFD_ASSERT (s != NULL);
-	  s->size = sizeof ELF_DYNAMIC_INTERPRETER;
+	  s->size = sizeof (ELF_DYNAMIC_INTERPRETER);
 	  s->contents = (unsigned char *) ELF_DYNAMIC_INTERPRETER;
 	}
 
@@ -2181,9 +2182,9 @@ elf32_arc_gc_sweep_hook (bfd *                     abfd,
 
 //#define elf_backend_copy_indirect_symbol     elf32_arc_copy_indirect_symbol
 
-#define elf_backend_gc_sweep_hook	elf32_arc_gc_sweep_hook
+//#define elf_backend_gc_sweep_hook	elf32_arc_gc_sweep_hook
 
-#define elf_backend_can_gc_sections	1
+#define elf_backend_can_gc_sections	0
 #define elf_backend_want_got_plt	1
 #define elf_backend_plt_readonly	1
 #define elf_backend_rela_plts_and_copies_p 1
