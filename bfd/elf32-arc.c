@@ -459,14 +459,18 @@ debug_arc_reloc (struct arc_relocation_data reloc_data)
 	       reloc_data.sym_section->name,
 	       (unsigned int) reloc_data.sym_section->output_offset);
       if(reloc_data.sym_section->output_section != NULL)
-	fprintf (stderr,
-		 ", output_section->vma = 0x%08x",
-		 (unsigned int) reloc_data.sym_section->output_section->vma);
+	{
+	  fprintf (stderr,
+		   ", output_section->vma = 0x%08x",
+		   ((unsigned int) reloc_data.sym_section->output_section->vma));
+	}
 
       fprintf (stderr, "\n");
     }
   else
-    fprintf (stderr, "	symbol section is NULL\n");
+    {
+      fprintf (stderr, "  symbol section is NULL\n");
+    }
 
   fprintf (stderr, " Input_section:\n");
   if (reloc_data.input_section != NULL)
@@ -482,7 +486,9 @@ debug_arc_reloc (struct arc_relocation_data reloc_data)
 	       reloc_data.reloc_offset));
     }
   else
-    fprintf (stderr, "	input section is NULL\n");
+    {
+      fprintf (stderr, "	input section is NULL\n");
+    }
 }
 
 #define TCB_SIZE (8)
@@ -1058,8 +1064,8 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
   dynobj = (elf_hash_table (info))->dynobj;
   if (dynobj == NULL)
     {
-      const struct elf_backend_data *bed;
-      bed = get_elf_backend_data (abfd);
+//      const struct elf_backend_data *bed;
+//      bed = get_elf_backend_data (abfd);
 
       elf_hash_table (info)->dynobj = dynobj = abfd;
 
@@ -1285,7 +1291,7 @@ add_symbol_to_plt (struct bfd_link_info *info)
 static void
 plt_do_relocs_for_symbol (bfd *abfd,
 			  struct dynamic_sections *ds,
-			  struct plt_reloc *reloc,
+			  const struct plt_reloc *reloc,
 			  bfd_vma plt_offset,
 			  bfd_vma symbol_got_offset)
 {
@@ -1329,13 +1335,13 @@ plt_do_relocs_for_symbol (bfd *abfd,
 
 #define ADD_RELA(BFD, SECTION, OFFSET, SYM_IDX, TYPE, ADDEND) \
 {\
-  struct dynamic_sections ds = arc_create_dynamic_sections (output_bfd, info); \
-  bfd_vma loc = (bfd_vma) ds.srel##SECTION->contents + ((ds.srel##SECTION->reloc_count++) * sizeof (Elf32_External_Rela)); \
+  struct dynamic_sections _ds = arc_create_dynamic_sections (output_bfd, info); \
+  bfd_vma loc = (bfd_vma) _ds.srel##SECTION->contents + ((_ds.srel##SECTION->reloc_count++) * sizeof (Elf32_External_Rela)); \
   Elf_Internal_Rela rel; \
   /* Do Relocation */ \
-  bfd_put_32 (output_bfd, (bfd_vma) 0, ds.s##SECTION->contents + OFFSET); \
+  bfd_put_32 (output_bfd, (bfd_vma) 0, _ds.s##SECTION->contents + OFFSET); \
   rel.r_addend = ADDEND; \
-  rel.r_offset = (ds.s##SECTION)->output_section->vma + (ds.s##SECTION)->output_offset + OFFSET; \
+  rel.r_offset = (_ds.s##SECTION)->output_section->vma + (_ds.s##SECTION)->output_offset + OFFSET; \
   rel.r_info = ELF32_R_INFO (SYM_IDX, TYPE); \
   bfd_elf32_swap_reloca_out (BFD, &rel, (bfd_byte *) loc); \
 }
@@ -1818,6 +1824,7 @@ elf_arc_finish_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
 
 /* This function is called via elf_ARC_link_hash_traverse.  */
    
+
 static bfd_boolean
 arc_copy_got_alloc (struct elf_link_hash_entry * h,
 		    void *info ATTRIBUTE_UNUSED)

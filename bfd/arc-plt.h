@@ -57,8 +57,8 @@ struct plt_version_t {
   const insn_hword_array *elem;
   const bfd_vma		  elem_size;
 
-  struct plt_reloc *entry_relocs;
-  struct plt_reloc *elem_relocs;
+  const struct plt_reloc *entry_relocs;
+  const struct plt_reloc *elem_relocs;
 };
 
 #define PLT_TYPE_START(NAME) \
