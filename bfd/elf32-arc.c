@@ -782,7 +782,8 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 				 FALSE, FALSE, TRUE);
 
       if (reloc_data.sdata_begin_symbol_vma_set == FALSE
-	    && h2 != NULL && h2->root.type != bfd_link_hash_undefined)
+	    && h2 != NULL && h2->root.type != bfd_link_hash_undefined
+	    && h2->root.u.def.section->output_section != NULL)  // TODO: Verify this condition
 	{
 	  reloc_data.sdata_begin_symbol_vma =
 	    (h2->root.u.def.value +
@@ -853,6 +854,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	      case R_ARC_32:
 	      case R_ARC_32_ME:
 	      case R_ARC_PC32:
+	      case R_ARC_32_PCREL:
 	        if (bfd_link_pic (info) 
 		      && (r_type != R_ARC_PC32
 			  || (h != NULL
@@ -887,7 +889,8 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		     	memset (&outrel, 0, sizeof outrel);
 			relocate = FALSE;
 		      }
-		    else if (r_type == R_ARC_PC32)
+		    else if (r_type == R_ARC_PC32 
+			     || r_type == R_ARC_32_PCREL)
 		      {
 			BFD_ASSERT (h != NULL && h->dynindx != -1);
 		  	if ((input_section->flags & SEC_ALLOC) != 0)
@@ -1108,7 +1111,6 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
 	return ds;
     }
 
-
   ds.sgotplt = bfd_get_section_by_name (dynobj, ".got.plt");
 
   ds.sdyn = bfd_get_section_by_name (dynobj, ".dynamic");
@@ -1184,6 +1186,7 @@ elf_arc_check_relocs (bfd *                      abfd,
           case R_ARC_32:
           case R_ARC_32_ME:
           case R_ARC_PC32:
+	  case R_ARC_32_PCREL:
             if (bfd_link_pic (info) 
                   && (r_type != R_ARC_PC32
             	  || (h != NULL
@@ -1199,7 +1202,7 @@ elf_arc_check_relocs (bfd *                      abfd,
 		    if (sreloc == NULL)
 		      return FALSE;
 		  }
-		sreloc->size += sizeof (Elf_Internal_Rela);
+		sreloc->size += sizeof (Elf32_External_Rela);
 
 	      }
 	  default:
@@ -1392,44 +1395,44 @@ relocate_plt_for_symbol (bfd *output_bfd,
 
   ADD_RELA (output_bfd, plt, got_offset, h->dynindx, R_ARC_JMP_SLOT, 0);
 
-  if (h->got.offset != (bfd_vma) -1)
-    {
-      Elf_Internal_Rela rel;
-      bfd_byte *loc;
+  //if (h->got.offset != (bfd_vma) -1)
+  //  {
+  //    Elf_Internal_Rela rel;
+  //    bfd_byte *loc;
 
-      rel.r_offset = (ds.sgot->output_section->vma
-        	      + ds.sgot->output_offset
-        	      + h->got.offset);
-      fprintf(stderr, "BLA = %d\n", h->got.offset);
+  //    rel.r_offset = (ds.sgot->output_section->vma
+  //      	      + ds.sgot->output_offset
+  //      	      + h->got.offset);
+  //    fprintf(stderr, "BLA = %d\n", h->got.offset);
 
-      /* If this is a -Bsymbolic link, and the symbol is defined
-         locally, we just want to emit a RELATIVE reloc.  Likewise if
-         the symbol was forced to be local because of a version file.
-         The entry in the global offset table will already have been
-         initialized in the relocate_section function.  */
-      if (bfd_link_pic (info)
-          && (info->symbolic || h->dynindx == -1)
-          && h->def_regular)
-        {
-          rel.r_addend = 0;
-          rel.r_info = ELF32_R_INFO (0, R_ARC_RELATIVE);
-        }
-      else if (h->dynindx == -1)
-        memset (&rel, 0, sizeof rel);
-      else
-        {
-          bfd_put_32 (output_bfd, (bfd_vma) 0, ds.sgot->contents + h->got.offset);
-          /* RELA relocs */
-          rel.r_addend = 0;
-          rel.r_info = ELF32_R_INFO (h->dynindx, R_ARC_GLOB_DAT);
-        }
+  //    /* If this is a -Bsymbolic link, and the symbol is defined
+  //       locally, we just want to emit a RELATIVE reloc.  Likewise if
+  //       the symbol was forced to be local because of a version file.
+  //       The entry in the global offset table will already have been
+  //       initialized in the relocate_section function.  */
+  //    if (bfd_link_pic (info)
+  //        && (info->symbolic || h->dynindx == -1)
+  //        && h->def_regular)
+  //      {
+  //        rel.r_addend = 0;
+  //        rel.r_info = ELF32_R_INFO (0, R_ARC_RELATIVE);
+  //      }
+  //    else if (h->dynindx == -1)
+  //      memset (&rel, 0, sizeof rel);
+  //    else
+  //      {
+  //        bfd_put_32 (output_bfd, (bfd_vma) 0, ds.sgot->contents + h->got.offset);
+  //        /* RELA relocs */
+  //        rel.r_addend = 0;
+  //        rel.r_info = ELF32_R_INFO (h->dynindx, R_ARC_GLOB_DAT);
+  //      }
 
-      loc = ds.srelgot->contents;
-      loc += ds.srelgot->reloc_count * sizeof (Elf32_External_Rela); /* relA */
-      ds.srelgot->reloc_count += 1;
+  //    loc = ds.srelgot->contents;
+  //    loc += ds.srelgot->reloc_count * sizeof (Elf32_External_Rela); /* relA */
+  //    ds.srelgot->reloc_count += 1;
 
-      bfd_elf32_swap_reloca_out (output_bfd, &rel, loc);
-    }
+  //    bfd_elf32_swap_reloca_out (output_bfd, &rel, loc);
+  //  }
 
 }
 
@@ -1495,6 +1498,7 @@ elf_arc_adjust_dynamic_symbol (struct bfd_link_info *info,
           h->plt.offset = (bfd_vma) -1;
           h->needs_plt = 0;
         }
+      return TRUE;
     }
 
   /* If this is a weak symbol, and there is a real definition, the
@@ -1966,43 +1970,53 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
 //				 elf_ARC_discard_copies,
 //				 (void *) info);
 
+  if (ds.splt != NULL && ds.splt->size == 0)
+    ds.splt->flags |= SEC_EXCLUDE;
+
+  if (ds.srelplt != NULL && ds.srelplt->size != 0)
+    {
+      const char *outname = bfd_get_section_name (output_bfd,
+      					    ds.srelplt->output_section);
+      asection *target = bfd_get_section_by_name (output_bfd,
+      					    outname + 4);
+      
+      relocs_exist = TRUE;
+      if (target != NULL && target->size != 0
+          && (target->flags & SEC_READONLY) != 0
+          && (target->flags & SEC_ALLOC) != 0)
+        reltext_exist = TRUE;
+    }
+
+
   for (s = dynobj->sections; s != NULL; s = s->next)
     {
 	bfd_boolean	is_dynamic_section = FALSE;
 
 	/* Skip any non dynamic section.  */
-	if (strstr (s->name, ".plt") != NULL
+	  if (strstr (s->name, ".plt") != NULL
 	    || strstr (s->name, ".got") != NULL
 	    || strstr (s->name, ".rel") != NULL)
 	  is_dynamic_section = TRUE;
 
-      /* Allocate memory for the section contents.  */
-      if (!is_dynamic_section)
-	continue;
+	if (!is_dynamic_section)
+	  continue;
+
+	if (s->flags & SEC_LINKER_CREATED == 0)
+	  continue;
+
+      if (strncmp (s->name, ".rela", 5) == 0)
+	{
+	  if (s->size == 0)
+	    s->flags |= SEC_EXCLUDE;
+
+	  /* We use the reloc_count field as a counter if we need
+	     to copy relocs into the output file.  */
+	  s->reloc_count = 0;
+	}
 
       s->contents = (bfd_byte *) bfd_alloc (dynobj, s->size);
       if (s->contents == NULL && s->size != 0)
 	  return FALSE;
-
-      if (s->size == 0 && strcmp(s->name, ".rela.plt") != 0) 
-	{
-	  s->flags |= SEC_EXCLUDE;
-	  continue;
-	}
-
-      if (strcmp (s->name, ".rela.plt") != 0)
-	{
-	  const char *outname = bfd_get_section_name (output_bfd,
-						      s->output_section);
-	  asection *target = bfd_get_section_by_name (output_bfd,
-						      outname + 4);
-
-	  relocs_exist = TRUE;
-	  if (target != NULL && target->size != 0
-	      && (target->flags & SEC_READONLY) != 0
-	      && (target->flags & SEC_ALLOC) != 0)
-	    reltext_exist = TRUE;
-	}
     }
 
   if (ds.sdyn)
@@ -2012,7 +2026,7 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
       	if (!_bfd_elf_add_dynamic_entry (info, DT_DEBUG, 0))
       		return FALSE;
 
-      if (ds.splt && ds.splt->size != 0)
+      if (ds.splt && (ds.splt->flags & SEC_EXCLUDE) == 0)
 	if (!_bfd_elf_add_dynamic_entry (info, DT_PLTGOT, 0)
 	    || !_bfd_elf_add_dynamic_entry (info, DT_PLTRELSZ, 0)
 	    || !_bfd_elf_add_dynamic_entry (info, DT_PLTREL, DT_RELA)
