@@ -1933,7 +1933,7 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
       struct elf_link_hash_entry *h;
 
       /* Set the contents of the .interp section to the interpreter.  */
-      if (!bfd_link_pic (info))
+      if (! bfd_link_pic (info))
 	{
 	  s = bfd_get_section_by_name (dynobj, ".interp");
 	  BFD_ASSERT (s != NULL);
@@ -2014,7 +2014,7 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
 	  s->reloc_count = 0;
 	}
 
-      s->contents = (bfd_byte *) bfd_alloc (dynobj, s->size);
+      s->contents = (bfd_byte *) bfd_zalloc (dynobj, s->size);
       if (s->contents == NULL && s->size != 0)
 	  return FALSE;
     }
