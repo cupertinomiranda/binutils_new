@@ -1056,44 +1056,44 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
   htab = elf_hash_table (info);
   BFD_ASSERT(htab);
 
-  /* Create dynamic sections for relocatable executables so that we can
-     copy relocations.  */
-    if(! htab->dynamic_sections_created)
-    {
-      if (! _bfd_elf_link_create_dynamic_sections (abfd, info))
-	BFD_ASSERT(0);
-    }
-
-  dynobj = (elf_hash_table (info))->dynobj;
-  if (dynobj == NULL)
-    {
-//      const struct elf_backend_data *bed;
-//      bed = get_elf_backend_data (abfd);
-
-      elf_hash_table (info)->dynobj = dynobj = abfd;
-
-      if (!_bfd_elf_create_got_section (dynobj, info))
-	BFD_ASSERT(0);
-      if(!_bfd_elf_create_dynamic_sections (dynobj, info))
-	BFD_ASSERT(0);
-
-//      if (bed->elf_backend_create_dynamic_sections == NULL
-//	|| ! (*bed->elf_backend_create_dynamic_sections) (dynobj, info))
-//	BFD_ASSERT(0);
-
-//    {
-//  asection *reldata = bfd_make_section_with_flags (dynobj, ".rela.data",
-//					 SEC_ALLOC
-//					 | SEC_LOAD
-//					 | SEC_HAS_CONTENTS
-//					 | SEC_IN_MEMORY
-//					 | SEC_LINKER_CREATED
-//					 | SEC_READONLY);
-//      if (reldata != NULL)
-//	  bfd_set_section_alignment (dynobj, ds.srelgot, 2);
-//    }
-      //elf_hash_table (info)->dynamic_sections_created = TRUE;
-    }
+      /* Create dynamic sections for relocatable executables so that we can
+         copy relocations.  */
+        if(! htab->dynamic_sections_created && bfd_link_pic (info))
+        {
+          if (! _bfd_elf_link_create_dynamic_sections (abfd, info))
+	    BFD_ASSERT(0);
+        }
+    
+      dynobj = (elf_hash_table (info))->dynobj;
+      if (dynobj == NULL)
+        {
+    //      const struct elf_backend_data *bed;
+    //      bed = get_elf_backend_data (abfd);
+    
+          elf_hash_table (info)->dynobj = dynobj = abfd;
+    
+          if (!_bfd_elf_create_got_section (dynobj, info))
+    	BFD_ASSERT(0);
+          if(!_bfd_elf_create_dynamic_sections (dynobj, info))
+    	BFD_ASSERT(0);
+    
+    //      if (bed->elf_backend_create_dynamic_sections == NULL
+    //	|| ! (*bed->elf_backend_create_dynamic_sections) (dynobj, info))
+    //	BFD_ASSERT(0);
+    
+    //    {
+    //  asection *reldata = bfd_make_section_with_flags (dynobj, ".rela.data",
+    //					 SEC_ALLOC
+    //					 | SEC_LOAD
+    //					 | SEC_HAS_CONTENTS
+    //					 | SEC_IN_MEMORY
+    //					 | SEC_LINKER_CREATED
+    //					 | SEC_READONLY);
+    //      if (reldata != NULL)
+    //	  bfd_set_section_alignment (dynobj, ds.srelgot, 2);
+    //    }
+          //elf_hash_table (info)->dynamic_sections_created = TRUE;
+        }
 
   ds.sgot = bfd_get_section_by_name (dynobj, ".got");
   ds.srelgot = bfd_get_section_by_name (dynobj, ".rela.got");
@@ -1113,9 +1113,13 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
 
   ds.sgotplt = bfd_get_section_by_name (dynobj, ".got.plt");
 
-  ds.sdyn = bfd_get_section_by_name (dynobj, ".dynamic");
-  ds.splt = bfd_get_section_by_name (dynobj, ".plt");
-  ds.srelplt = bfd_get_section_by_name (dynobj, ".rela.plt");
+
+  if (bfd_link_pic (info)) 
+    {
+      ds.sdyn = bfd_get_section_by_name (dynobj, ".dynamic");
+      ds.splt = bfd_get_section_by_name (dynobj, ".plt");
+      ds.srelplt = bfd_get_section_by_name (dynobj, ".rela.plt");
+    }
 
   ds.sbss = bfd_get_section_by_name (dynobj, ".bss");
   ds.srelbss = bfd_get_section_by_name (dynobj, ".rela.bss");
@@ -1956,7 +1960,8 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
          we are not creating the dynamic sections, we will not actually
          use these entries.  Reset the size of .rela.got, which will cause
          it to get stripped from the output file below.  */
-      ds.srelgot->size = 0;
+      if (ds.srelgot != NULL) 
+	ds.srelgot->size = 0;
     }
 
   /* If this is a -Bsymbolic shared link, then we need to discard all
@@ -1992,14 +1997,15 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
     {
 	bfd_boolean	is_dynamic_section = FALSE;
 
-	/* Skip any non dynamic section.  */
-	  if (strstr (s->name, ".plt") != NULL
-	    || strstr (s->name, ".got") != NULL
-	    || strstr (s->name, ".rel") != NULL)
-	  is_dynamic_section = TRUE;
+	// TODO: Validate if we need this
+	///* Skip any non dynamic section.  */
+	//  if (strstr (s->name, ".plt") != NULL
+	//    || strstr (s->name, ".got") != NULL
+	//    || strstr (s->name, ".rel") != NULL)
+	//  is_dynamic_section = TRUE;
 
-	if (!is_dynamic_section)
-	  continue;
+	//if (!is_dynamic_section)
+	//  continue;
 
 	if (s->flags & SEC_LINKER_CREATED == 0)
 	  continue;
