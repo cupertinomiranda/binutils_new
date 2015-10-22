@@ -3,8 +3,8 @@
 
 DYNAMIC RELOCATION RECORDS
 OFFSET +TYPE +VALUE .*
-[0-9a-f]+ R_ARC_PC32 +foo
-[0-9a-f]+ R_ARC_PC32 +foo\+0x00000100
+[0-9a-f]+ R_ARC_32_PCREL +foo
+[0-9a-f]+ R_ARC_32_PCREL +foo\+0x00000100
 [0-9a-f]+ R_ARC_JMP_SLOT +foo
 
 
