@@ -1058,7 +1058,7 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
 
       /* Create dynamic sections for relocatable executables so that we can
          copy relocations.  */
-        if(! htab->dynamic_sections_created && bfd_link_pic (info))
+        if(! htab->dynamic_sections_created && bfd_link_pic (info)) 
         {
           if (! _bfd_elf_link_create_dynamic_sections (abfd, info))
 	    BFD_ASSERT(0);
@@ -1995,20 +1995,20 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
 
   for (s = dynobj->sections; s != NULL; s = s->next)
     {
-	bfd_boolean	is_dynamic_section = FALSE;
-
-	// TODO: Validate if we need this
-	///* Skip any non dynamic section.  */
-	//  if (strstr (s->name, ".plt") != NULL
-	//    || strstr (s->name, ".got") != NULL
-	//    || strstr (s->name, ".rel") != NULL)
-	//  is_dynamic_section = TRUE;
-
-	//if (!is_dynamic_section)
-	//  continue;
-
-	if (s->flags & SEC_LINKER_CREATED == 0)
-	  continue;
+      //bfd_boolean	is_dynamic_section = FALSE;
+      
+      // TODO: Validate if we need this
+      ///* Skip any non dynamic section.  */
+      //  if (strstr (s->name, ".plt") != NULL
+      //    || strstr (s->name, ".got") != NULL
+      //    || strstr (s->name, ".rel") != NULL)
+      //  is_dynamic_section = TRUE;
+      
+      //if (!is_dynamic_section)
+      //  continue;
+      
+      if (s->flags & SEC_LINKER_CREATED == 0)
+        continue;
 
       if (strncmp (s->name, ".rela", 5) == 0)
 	{
@@ -2019,6 +2019,9 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
 	     to copy relocs into the output file.  */
 	  s->reloc_count = 0;
 	}
+
+      if (strcmp (s->name, ".dynamic") == NULL)
+        continue;
 
       s->contents = (bfd_byte *) bfd_zalloc (dynobj, s->size);
       if (s->contents == NULL && s->size != 0)
