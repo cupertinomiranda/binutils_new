@@ -955,7 +955,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 
 	      reloc_data.should_relocate = TRUE;
 
-	      if (is_reloc_for_GOT (howto) && bfd_link_pic (info))
+	      if (is_reloc_for_GOT (howto) && !bfd_link_pic (info))
 		{
 		  struct dynamic_sections ds =
 		  arc_create_dynamic_sections (output_bfd, info);
