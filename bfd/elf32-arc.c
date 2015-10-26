@@ -209,7 +209,7 @@ enum howto_list
 #undef ARC_RELOC_HOWTO
 
 #define ARC_RELOC_HOWTO(TYPE, VALUE, RSIZE, BITSIZE, RELOC_FUNCTION, OVERFLOW, FORMULA) \
-  [TYPE] = HOWTO (R_##TYPE, 0, RSIZE, BITSIZE, FALSE, 0, complain_overflow_##OVERFLOW, arc_elf_reloc, #TYPE, FALSE, 0, 0, FALSE),
+  [TYPE] = HOWTO (R_##TYPE, 0, RSIZE, BITSIZE, FALSE, 0, complain_overflow_##OVERFLOW, arc_elf_reloc, "R_" #TYPE, FALSE, 0, 0, FALSE),
 
 static struct reloc_howto_struct elf_arc_howto_table[] =
 {
@@ -276,7 +276,7 @@ static const struct arc_reloc_map arc_reloc_map[] =
 #undef ARC_RELOC_HOWTO
 
 static reloc_howto_type *
-bfd_elf32_bfd_reloc_type_lookup (bfd * abfd ATTRIBUTE_UNUSED,
+arc_elf32_bfd_reloc_type_lookup (bfd * abfd ATTRIBUTE_UNUSED,
 				 bfd_reloc_code_real_type code)
 {
   unsigned int i;
@@ -296,6 +296,76 @@ bfd_elf32_bfd_reloc_type_lookup (bfd * abfd ATTRIBUTE_UNUSED,
 
   return NULL;
 }
+
+/* Function to set the ELF flag bits.  */
+static bfd_boolean
+arc_elf_set_private_flags (bfd *abfd, flagword flags)
+{
+  elf_elfheader (abfd)->e_flags = flags;
+  elf_flags_init (abfd) = TRUE;
+  return TRUE;
+}
+
+/* Print private flags. */
+static bfd_boolean
+arc_elf_print_private_bfd_data (bfd *abfd, void * ptr)
+{
+  FILE *file = (FILE *) ptr;
+  flagword flags;
+
+  BFD_ASSERT (abfd != NULL && ptr != NULL);
+
+  /* Print normal ELF private data.  */
+  _bfd_elf_print_private_bfd_data (abfd, ptr);
+
+  flags = elf_elfheader (abfd)->e_flags;
+  fprintf (file, _("private flags = 0x%lx:"), (unsigned long) flags);
+
+  switch (flags & EF_ARC_MACH_MSK)
+    {
+    case EF_ARC_CPU_GENERIC : fprintf (file, " -mcpu=generic/A4"); break;
+    case EF_ARC_CPU_ARCV2HS : fprintf (file, " -mcpu=ARCv2HS");    break;
+    case EF_ARC_CPU_ARCV2EM : fprintf (file, " -mcpu=ARCv2EM");    break;
+    case E_ARC_MACH_ARC600  : fprintf (file, " -mcpu=ARC600");     break;
+    case E_ARC_MACH_ARC601  : fprintf (file, " -mcpu=ARC601");     break;
+    case E_ARC_MACH_ARC700  : fprintf (file, " -mcpu=ARC700");     break;
+    default:
+      break;
+    }
+
+  switch (flags & EF_ARC_OSABI_MSK)
+    {
+    case E_ARC_OSABI_ORIG : fprintf (file, " (ABI:legacy)"); break;
+    case E_ARC_OSABI_V2   : fprintf (file, " (ABI:v2)");     break;
+    case E_ARC_OSABI_V3   : fprintf (file, " (ABI:v3)");     break;
+    default: break;
+    }
+
+  fputc ('\n', file);
+  return TRUE;
+}
+
+/* Copy backend specific data from one object module to another.  */
+
+static bfd_boolean
+arc_elf_copy_private_bfd_data (bfd *ibfd, bfd *obfd)
+{
+  if (bfd_get_flavour (ibfd) != bfd_target_elf_flavour
+      || bfd_get_flavour (obfd) != bfd_target_elf_flavour)
+    return TRUE;
+
+  BFD_ASSERT (!elf_flags_init (obfd)
+	      || elf_elfheader (obfd)->e_flags == elf_elfheader (ibfd)->e_flags);
+
+  elf_elfheader (obfd)->e_flags = elf_elfheader (ibfd)->e_flags;
+  elf_flags_init (obfd) = TRUE;
+
+  /* Copy object attributes.  */
+  _bfd_elf_copy_obj_attributes (ibfd, obfd);
+
+  return TRUE;
+}
+
 
 static reloc_howto_type *
 bfd_elf32_bfd_reloc_name_lookup (bfd * abfd ATTRIBUTE_UNUSED, const char *r_name)
@@ -322,6 +392,90 @@ arc_info_to_howto_rel (bfd * abfd ATTRIBUTE_UNUSED,
   r_type = ELF32_R_TYPE (dst->r_info);
   BFD_ASSERT (r_type < (unsigned int) R_ARC_max);
   cache_ptr->howto = &elf_arc_howto_table[r_type];
+}
+
+/* Merge backend specific data from an object file to the output
+   object file when linking.  */
+static bfd_boolean
+arc_elf_merge_private_bfd_data (bfd *ibfd, bfd *obfd)
+{
+  unsigned short mach_ibfd;
+  static unsigned short mach_obfd = EM_NONE;
+  flagword old_flags;
+  flagword new_flags;
+
+  /* Collect ELF flags. */
+  new_flags = elf_elfheader (ibfd)->e_flags & EF_ARC_MACH_MSK;
+  old_flags = elf_elfheader (obfd)->e_flags & EF_ARC_MACH_MSK;
+
+#if DEBUG
+  (*_bfd_error_handler) ("old_flags = 0x%.8lx, new_flags = 0x%.8lx, init = %s, filename = %s",
+			 old_flags, new_flags, elf_flags_init (obfd) ? "yes" : "no",
+			 bfd_get_filename (ibfd));
+#endif
+
+  if (!elf_flags_init (obfd))			/* First call, no flags set.  */
+    {
+      elf_flags_init (obfd) = TRUE;
+      old_flags = new_flags;
+    }
+
+  if (bfd_get_flavour (ibfd) != bfd_target_elf_flavour
+      || bfd_get_flavour (obfd) != bfd_target_elf_flavour)
+    return TRUE;
+
+  if (bfd_count_sections (ibfd) == 0)
+    return TRUE ; /* For the case of empty archive files */
+
+  mach_ibfd = elf_elfheader (ibfd)->e_machine;
+
+   /* Check if we have the same endianess.  */
+  if (! _bfd_generic_verify_endian_match (ibfd, obfd))
+    {
+      _bfd_error_handler (_("\
+ERROR: Endian Match failed . Attempting to link %B with binary %s \
+of opposite endian-ness"),
+			  ibfd, bfd_get_filename (obfd));
+      return FALSE;
+    }
+
+  if (mach_obfd == EM_NONE)
+    {
+      mach_obfd = mach_ibfd;
+    }
+  else
+    {
+      if(mach_ibfd != mach_obfd)
+	{
+	  _bfd_error_handler (_("ERROR: Attempting to link %B \
+with a binary %s of different architecture"),
+			      ibfd, bfd_get_filename (obfd));
+	  return FALSE;
+	}
+      else if (new_flags != old_flags)
+	{
+	  /* Warn if different flags. */
+	  (*_bfd_error_handler)
+	    (_("%s: uses different e_flags (0x%lx) fields than previous modules (0x%lx)"),
+	     bfd_get_filename (ibfd), (long)new_flags, (long)old_flags);
+	  if (new_flags && old_flags)
+	    return FALSE;
+	  /* MWDT doesnt set the eflags hence make sure we choose the
+	     eflags set by gcc.  */
+	  new_flags = new_flags > old_flags ? new_flags : old_flags;
+	}
+
+    }
+
+  /* Update the flags. */
+  elf_elfheader (obfd)->e_flags = new_flags;
+
+  if (bfd_get_mach (obfd) < bfd_get_mach (ibfd))
+    {
+      return bfd_set_arch_mach (obfd, bfd_arch_arc, bfd_get_mach(ibfd));
+    }
+
+  return TRUE;
 }
 
 /* Set the right machine number for an ARC ELF file.  */
@@ -1181,14 +1335,44 @@ elf_arc_check_relocs (bfd *                      abfd,
       /* Load symbol information.  */
       r_symndx = ELF32_R_SYM (rel->r_info);
       if (r_symndx < symtab_hdr->sh_info) /* Is a local symbol.  */
-	h = NULL;
+	  h = NULL;
       else /* Global one.  */
-	h = sym_hashes[r_symndx - symtab_hdr->sh_info];
+	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
 
       switch(r_type) 
         {
           case R_ARC_32:
           case R_ARC_32_ME:
+	    /* During shared library creation, these relocs should not appear in
+	       a shared library (as memory will be read only and the dynamic
+	       linker can not resolve these. However the error should not occur
+	       for e.g. debugging or non-readonly sections. */
+	    if (bfd_link_dll(info) && !bfd_link_pie(info)
+	        && (sec->flags & SEC_ALLOC) != 0
+	        && (sec->flags & SEC_READONLY) != 0)
+	      {
+	        const char *name;
+	        if (h)
+	          name = h->root.root.string;
+	        else
+		  name = "UNKNOWN";
+	        //  name = bfd_elf_sym_name (abfd, symtab_hdr, isym, NULL);
+		(*_bfd_error_handler)
+		  (_("%B: relocation %s against `%s' can not be used when making a shared object; recompile with -fPIC"),
+	            abfd,
+		    arc_elf32_bfd_reloc_type_lookup(abfd, rel->r_info)->name,
+		    name);
+	        bfd_set_error (bfd_error_bad_value);
+	        return FALSE;
+	      }
+
+            /* In some cases we are not setting the 'non_got_ref' flag, even
+               though the relocations don't require a GOT access.  We should
+               extend the testing in this area to ensure that no significant
+               cases are being missed.  */
+            if (h)
+              h->non_got_ref = 1;
+	    /* FALLTHROUGH */
           case R_ARC_PC32:
 	  case R_ARC_32_PCREL:
             if (bfd_link_pic (info) 
@@ -2195,6 +2379,12 @@ elf32_arc_gc_sweep_hook (bfd *                     abfd,
 #define ELF_MACHINE_CODE    EM_ARC_COMPACT
 #define ELF_MACHINE_ALT1    EM_ARC_COMPACT2
 #define ELF_MAXPAGESIZE     0x2000
+
+#define bfd_elf32_bfd_merge_private_bfd_data    arc_elf_merge_private_bfd_data
+#define bfd_elf32_bfd_reloc_type_lookup         arc_elf32_bfd_reloc_type_lookup
+#define bfd_elf32_bfd_set_private_flags	        arc_elf_set_private_flags
+#define bfd_elf32_bfd_print_private_bfd_data  arc_elf_print_private_bfd_data
+#define bfd_elf32_bfd_copy_private_bfd_data arc_elf_copy_private_bfd_data
 
 #define elf_info_to_howto_rel		     arc_info_to_howto_rel
 #define elf_backend_object_p		     arc_elf_object_p
