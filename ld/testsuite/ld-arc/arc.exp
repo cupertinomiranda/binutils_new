@@ -73,9 +73,14 @@ if {[check_shared_lib_support]} {
 	{"Build copyreloc-lib.so" "-shared" ""
 	    "-mcpu=archs" {copyreloc-lib.s}
 	    {} "copyreloc-lib.so"}
-	{"Test copy relocation" "-e0 tmpdir/copyreloc-lib.so" ""
+	{"Test R_ARC_COPY relocation" "-e0 tmpdir/copyreloc-lib.so" ""
 	    "-mcpu=archs" {copyreloc-main.s}
-	    {} "copyreloc-main"}
+	    {{readelf --relocs copyreloc-main.rd}}
+	    "copyreloc-main"}
+	{"Test R_ARC_GLOB_DATA relocation" "-e0 tmpdir/copyreloc-lib.so" ""
+	    "-mcpu=archs" {copyreloc-main1.s}
+	    {{readelf --relocs copyreloc-main1.rd}}
+	    "copyreloc-main1"}
     }
 
     run_ld_link_tests $arcshared_tests
