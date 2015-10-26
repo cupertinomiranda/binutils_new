@@ -70,6 +70,12 @@ if {[check_shared_lib_support]} {
 	    "-mcpu=archs" {tls-lib.s}
 	    {{objdump -fdw tls-lib.d} {objdump -Rw tls-lib.r}}
 	    "tls-lib.so"}
+	{"Build copyreloc-lib.so" "-shared" ""
+	    "-mcpu=archs" {copyreloc-lib.s}
+	    {} "copyreloc-lib.so"}
+	{"Test copy relocation" "-e0 tmpdir/copyreloc-lib.so" ""
+	    "-mcpu=archs" {copyreloc-main.s}
+	    {} "copyreloc-main"}
     }
 
     run_ld_link_tests $arcshared_tests
