@@ -933,6 +933,23 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 
       struct elf_link_hash_entry *h2;
 
+
+      r_type = ELF32_R_TYPE (rel->r_info);
+
+      if (r_type >= (int) R_ARC_max)
+	{
+	  bfd_set_error (bfd_error_bad_value);
+	  return FALSE;
+	}
+      howto = &elf_arc_howto_table[r_type];
+
+      r_symndx = ELF32_R_SYM (rel->r_info);
+
+      /* If we are generating another .o file and the symbol in not 
+       * local, skip this relocation.  */
+      if(bfd_link_relocatable(info) && !(r_symndx < symtab_hdr->sh_info))
+	continue;
+
       h2 = elf_link_hash_lookup (elf_hash_table (info), "__SDATA_BEGIN__",
 				 FALSE, FALSE, TRUE);
 
@@ -956,21 +973,12 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	       h2->root.u.def.section->output_section->vma);
 	}
 
-      r_type = ELF32_R_TYPE (rel->r_info);
-
-      if (r_type >= (int) R_ARC_max)
-	{
-	  bfd_set_error (bfd_error_bad_value);
-	  return FALSE;
-	}
-      howto = &elf_arc_howto_table[r_type];
 
       reloc_data.input_section = input_section;
       reloc_data.howto = howto;
       reloc_data.reloc_offset = rel->r_offset;
       reloc_data.reloc_addend = rel->r_addend;
 
-      r_symndx = ELF32_R_SYM (rel->r_info);
 
       /* This is a final link.  */
       h = NULL;
@@ -1311,6 +1319,9 @@ elf_arc_check_relocs (bfd *                      abfd,
   const Elf_Internal_Rela *	rel_end;
   bfd *				dynobj ATTRIBUTE_UNUSED;
   asection *			sreloc = NULL;
+
+  if(bfd_link_relocatable(info))
+    return TRUE;
 
   dynobj = (elf_hash_table (info))->dynobj;
   symtab_hdr = &((elf_tdata (abfd))->symtab_hdr);
