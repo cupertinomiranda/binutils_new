@@ -1559,6 +1559,19 @@ plt_do_relocs_for_symbol (bfd *abfd,
   bfd_elf32_swap_reloca_out (BFD, &rel, (bfd_byte *) loc); \
 }
 
+#define ADD_RELA_NEW(BFD, SECTION, OFFSET, SYM_IDX, TYPE, ADDEND) \
+{\
+  struct dynamic_sections _ds = arc_create_dynamic_sections (output_bfd, info); \
+  bfd_vma loc = (bfd_vma) _ds.srel##SECTION->contents + (_ds.srel##SECTION->reloc_count * sizeof (Elf32_External_Rela)); \
+  _ds.srel##SECTION->reloc_count++; \
+  Elf_Internal_Rela rel; \
+  rel.r_addend = ADDEND; \
+  rel.r_offset = OFFSET; \
+  rel.r_info = ELF32_R_INFO (SYM_IDX, TYPE); \
+  bfd_elf32_swap_reloca_out (BFD, &rel, (bfd_byte *) loc); \
+}
+
+
 
 static void
 relocate_plt_for_symbol (bfd *output_bfd, 
@@ -1830,7 +1843,10 @@ elf_arc_finish_dynamic_symbol (bfd * output_bfd,
     }
   if (h->needs_copy)
     {
-      ADD_RELA (output_bfd, bss, h->root.u.def.value, h->dynindx, R_ARC_COPY, 0);
+      bfd_vma rel_offset = (h->root.u.def.value
+		            + h->root.u.def.section->output_section->vma
+			    + h->root.u.def.section->output_offset);
+      ADD_RELA_NEW (output_bfd, bss, rel_offset, h->dynindx, R_ARC_COPY, 0);
     }
 
   //if (h->needs_copy)
