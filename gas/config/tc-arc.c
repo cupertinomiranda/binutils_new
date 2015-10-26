@@ -2541,7 +2541,7 @@ find_reloc (const char *name,
 {
   unsigned int i;
   int j;
-  bfd_boolean found_flag;
+  bfd_boolean found_flag, tmp;
   extended_bfd_reloc_code_real_type ret = BFD_RELOC_UNUSED;
 
   for (i = 0; i < arc_num_equiv_tab; i++)
@@ -2553,17 +2553,34 @@ find_reloc (const char *name,
 	continue;
       if (r->mnemonic && (strcmp (r->mnemonic, opcodename)))
 	continue;
-      if (r->flagcode)
+      if (r->flags[0])
 	{
 	  if (!nflg)
 	    continue;
 	  found_flag = FALSE;
-	  for (j = 0; j < nflg; j++)
-	    if (pflags[i].code == r->flagcode)
-	      {
-		found_flag = TRUE;
-		break;
-	      }
+	  unsigned * psflg = (unsigned *)r->flags;
+	  do
+	    {
+	      tmp = FALSE;
+	      for (j = 0; j < nflg; j++)
+		if (!strcmp (pflags[j].name,
+			     arc_flag_operands[*psflg].name))
+		  {
+		    tmp = TRUE;
+		    break;
+		  }
+	      if (!tmp)
+		{
+		  found_flag = FALSE;
+		  break;
+		}
+	      else
+		{
+		  found_flag = TRUE;
+		}
+	      ++ psflg;
+	    } while (*psflg);
+
 	  if (!found_flag)
 	    continue;
 	}
