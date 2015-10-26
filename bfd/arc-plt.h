@@ -14,10 +14,15 @@ enum plt_reloc_symbol {
   SGOT = 1,
 
   RELATIVE = (1 << 8),
-  MIDDLE_ENDIAN = (1 << 9)
+  RELATIVE_INSN_32 = (1 << 9),
+  RELATIVE_INSN_24 = (1 << 10),
+
+  MIDDLE_ENDIAN = (1 << 11)
 };
 
-#define IS_RELATIVE(S) ((S & RELATIVE) != 0)
+#define IS_RELATIVE(S) ((S & (RELATIVE | RELATIVE_INSN_24 | RELATIVE_INSN_32)) != 0)
+#define IS_INSN_32(S) ((S & RELATIVE_INSN_32) != 0)
+#define IS_INSN_24(S) ((S & RELATIVE_INSN_24) != 0)
 #define IS_MIDDLE_ENDIAN(S) ((S & MIDDLE_ENDIAN) != 0)
 #define SYM_ONLY(S) (S & 0xFF)
 

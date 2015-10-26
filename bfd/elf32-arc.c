@@ -55,6 +55,7 @@ struct dynamic_sections
   asection	 *sgot;
   asection	 *srelgot;
   asection	 *sgotplt;
+  asection	 *srelgotplt;
   asection	 *sdyn;
   asection	 *splt;
   asection	 *srelplt;
@@ -1200,6 +1201,7 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
 	.sgot = NULL,
 	.srelgot = NULL,
 	.sgotplt = NULL,
+	.srelgotplt = NULL,
 	.sdyn = NULL,
 	.splt = NULL,
 	.srelplt = NULL,
@@ -1266,14 +1268,16 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
     }
 
   ds.sgotplt = bfd_get_section_by_name (dynobj, ".got.plt");
+  ds.srelgotplt = ds.srelplt;
 
 
   if (bfd_link_pic (info)) 
     {
       ds.sdyn = bfd_get_section_by_name (dynobj, ".dynamic");
-      ds.splt = bfd_get_section_by_name (dynobj, ".plt");
-      ds.srelplt = bfd_get_section_by_name (dynobj, ".rela.plt");
     }
+  
+  ds.splt = bfd_get_section_by_name (dynobj, ".plt");
+  ds.srelplt = bfd_get_section_by_name (dynobj, ".rela.plt");
 
   ds.sbss = bfd_get_section_by_name (dynobj, ".bss");
   ds.srelbss = bfd_get_section_by_name (dynobj, ".rela.bss");
@@ -1500,9 +1504,16 @@ plt_do_relocs_for_symbol (bfd *abfd,
 	}
       relocation += reloc->addend;
 
-      relocation -= (IS_RELATIVE (reloc->symbol))
-	  ? ds->splt->output_section->vma + ds->splt->output_offset +
-	  plt_offset + reloc->offset : 0;
+      if(IS_RELATIVE(reloc->symbol)) 
+	{
+	  bfd_vma reloc_offset = reloc->offset;
+      	  reloc_offset -= (IS_INSN_32(reloc->symbol)) ? 4 : 0;
+      	  reloc_offset -= (IS_INSN_24(reloc->symbol)) ? 2 : 0;
+
+	  relocation -= ds->splt->output_section->vma 
+          	         + ds->splt->output_offset 
+        	         + plt_offset + reloc_offset;
+	}
 
       if (IS_MIDDLE_ENDIAN (reloc->symbol) || bfd_big_endian (abfd))
 	{
@@ -1530,7 +1541,7 @@ plt_do_relocs_for_symbol (bfd *abfd,
   bfd_vma loc = (bfd_vma) _ds.srel##SECTION->contents + ((_ds.srel##SECTION->reloc_count++) * sizeof (Elf32_External_Rela)); \
   Elf_Internal_Rela rel; \
   /* Do Relocation */ \
-  bfd_put_32 (output_bfd, (bfd_vma) 0, _ds.s##SECTION->contents + OFFSET); \
+  /* bfd_put_32 (output_bfd, (bfd_vma) 0, _ds.s##SECTION->contents + OFFSET); */\
   rel.r_addend = ADDEND; \
   rel.r_offset = (_ds.s##SECTION)->output_section->vma + (_ds.s##SECTION)->output_offset + OFFSET; \
   rel.r_info = ELF32_R_INFO (SYM_IDX, TYPE); \
@@ -1566,22 +1577,22 @@ relocate_plt_for_symbol (bfd *output_bfd,
   //fprintf(stderr, "GOT_OFFSET = 0x%x\n", got_offset);
 
   /* TODO: Fill in the entry in the .rela.plt section.  */
-  //{
-  //  Elf_Internal_Rela rel;
-  //  bfd_byte *loc;
+  {
+    Elf_Internal_Rela rel;
+    bfd_byte *loc;
 
-  //  rel.r_offset = (ds.sgotplt->output_section->vma
-  //        	  + ds.sgotplt->output_offset
-  //        	  + got_offset);
-  //  rel.r_addend = 0;
-  //  rel.r_info = ELF32_R_INFO (h->dynindx, R_ARC_JMP_SLOT);
+    rel.r_offset = (ds.sgotplt->output_section->vma
+          	  + ds.sgotplt->output_offset
+          	  + got_offset);
+    rel.r_addend = 0;
+    rel.r_info = ELF32_R_INFO (h->dynindx, R_ARC_JMP_SLOT);
 
-  //  loc = ds.srelplt->contents;
-  //  loc += plt_index * sizeof (Elf32_External_Rela); /* relA */
-  //  bfd_elf32_swap_reloca_out (output_bfd, &rel, loc);
-  //}
+    loc = ds.srelplt->contents;
+    loc += plt_index * sizeof (Elf32_External_Rela); /* relA */
+    bfd_elf32_swap_reloca_out (output_bfd, &rel, loc);
+  }
 
-  ADD_RELA (output_bfd, plt, got_offset, h->dynindx, R_ARC_JMP_SLOT, 0);
+  //ADD_RELA (output_bfd, gotplt, got_offset, h->dynindx, R_ARC_JMP_SLOT, 0);
 
   //if (h->got.offset != (bfd_vma) -1)
   //  {
