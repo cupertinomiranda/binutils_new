@@ -1279,7 +1279,7 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
   ds.srelgotplt = ds.srelplt;
 
 
-  if (bfd_link_pic (info)) 
+  if (htab->dynamic_sections_created) 
     {
       ds.sdyn = bfd_get_section_by_name (dynobj, ".dynamic");
     }
