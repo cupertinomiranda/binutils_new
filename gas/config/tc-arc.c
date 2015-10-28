@@ -91,122 +91,122 @@ static void arc_option (int);
 static void arc_extra_reloc (int);
 
 const pseudo_typeS md_pseudo_table[] =
-  {
-    /* Make sure that .word is 32 bits.  */
-    { "word", cons, 4 },
+{
+  /* Make sure that .word is 32 bits.  */
+  { "word", cons, 4 },
 
-    { "align",   s_align_bytes, 0 }, /* Defaulting is invalid (0).  */
-    { "lcomm",   arc_lcomm, 0 },
-    { "lcommon", arc_lcomm, 0 },
-    { "cpu",     arc_option, 0 },
+  { "align",   s_align_bytes, 0 }, /* Defaulting is invalid (0).  */
+  { "lcomm",   arc_lcomm, 0 },
+  { "lcommon", arc_lcomm, 0 },
+  { "cpu",     arc_option, 0 },
 
-    { "tls_gd_ld",   arc_extra_reloc, BFD_RELOC_ARC_TLS_GD_LD },
-    { "tls_gd_call", arc_extra_reloc, BFD_RELOC_ARC_TLS_GD_CALL },
+  { "tls_gd_ld",   arc_extra_reloc, BFD_RELOC_ARC_TLS_GD_LD },
+  { "tls_gd_call", arc_extra_reloc, BFD_RELOC_ARC_TLS_GD_CALL },
 
-    { NULL, NULL, 0 }
-  };
+  { NULL, NULL, 0 }
+};
 
 const char *md_shortopts = "";
 
 enum options
-  {
-    OPTION_EB = OPTION_MD_BASE,
-    OPTION_EL,
+{
+  OPTION_EB = OPTION_MD_BASE,
+  OPTION_EL,
 
-    OPTION_ARC600,
-    OPTION_ARC601,
-    OPTION_ARC700,
-    OPTION_ARCEM,
-    OPTION_ARCHS,
+  OPTION_ARC600,
+  OPTION_ARC601,
+  OPTION_ARC700,
+  OPTION_ARCEM,
+  OPTION_ARCHS,
 
-    OPTION_MCPU,
-    OPTION_CD,
+  OPTION_MCPU,
+  OPTION_CD,
 
-    /* The following options are deprecated and provided here only for
-       compatibility reasons.  */
-    OPTION_USER_MODE,
-    OPTION_LD_EXT_MASK,
-    OPTION_SWAP,
-    OPTION_NORM,
-    OPTION_BARREL_SHIFT,
-    OPTION_MIN_MAX,
-    OPTION_NO_MPY,
-    OPTION_EA,
-    OPTION_MUL64,
-    OPTION_SIMD,
-    OPTION_SPFP,
-    OPTION_DPFP,
-    OPTION_XMAC_D16,
-    OPTION_XMAC_24,
-    OPTION_DSP_PACKA,
-    OPTION_CRC,
-    OPTION_DVBF,
-    OPTION_TELEPHONY,
-    OPTION_XYMEMORY,
-    OPTION_LOCK,
-    OPTION_SWAPE,
-    OPTION_RTSC,
-    OPTION_FPUDA
-  };
+  /* The following options are deprecated and provided here only for
+     compatibility reasons.  */
+  OPTION_USER_MODE,
+  OPTION_LD_EXT_MASK,
+  OPTION_SWAP,
+  OPTION_NORM,
+  OPTION_BARREL_SHIFT,
+  OPTION_MIN_MAX,
+  OPTION_NO_MPY,
+  OPTION_EA,
+  OPTION_MUL64,
+  OPTION_SIMD,
+  OPTION_SPFP,
+  OPTION_DPFP,
+  OPTION_XMAC_D16,
+  OPTION_XMAC_24,
+  OPTION_DSP_PACKA,
+  OPTION_CRC,
+  OPTION_DVBF,
+  OPTION_TELEPHONY,
+  OPTION_XYMEMORY,
+  OPTION_LOCK,
+  OPTION_SWAPE,
+  OPTION_RTSC,
+  OPTION_FPUDA
+};
 
 struct option md_longopts[] =
-  {
-    { "EB",		no_argument,	   NULL, OPTION_EB },
-    { "EL",		no_argument,	   NULL, OPTION_EL },
-    { "mcpu",		required_argument, NULL, OPTION_MCPU },
-    { "mA6",		no_argument,	   NULL, OPTION_ARC600 },
-    { "mARC600",	no_argument,	   NULL, OPTION_ARC600 },
-    { "mARC601",	no_argument,	   NULL, OPTION_ARC601 },
-    { "mARC700",	no_argument,	   NULL, OPTION_ARC700 },
-    { "mA7",		no_argument,	   NULL, OPTION_ARC700 },
-    { "mEM",		no_argument,	   NULL, OPTION_ARCEM },
-    { "mHS",		no_argument,	   NULL, OPTION_ARCHS },
-    { "mcode-density",	no_argument,	   NULL, OPTION_CD },
+{
+  { "EB",		no_argument,	   NULL, OPTION_EB },
+  { "EL",		no_argument,	   NULL, OPTION_EL },
+  { "mcpu",		required_argument, NULL, OPTION_MCPU },
+  { "mA6",		no_argument,	   NULL, OPTION_ARC600 },
+  { "mARC600",	no_argument,	   NULL, OPTION_ARC600 },
+  { "mARC601",	no_argument,	   NULL, OPTION_ARC601 },
+  { "mARC700",	no_argument,	   NULL, OPTION_ARC700 },
+  { "mA7",		no_argument,	   NULL, OPTION_ARC700 },
+  { "mEM",		no_argument,	   NULL, OPTION_ARCEM },
+  { "mHS",		no_argument,	   NULL, OPTION_ARCHS },
+  { "mcode-density",	no_argument,	   NULL, OPTION_CD },
 
-    /* The following options are deprecated and provided here only for
-       compatibility reasons.  */
-    { "mav2em", no_argument, NULL, OPTION_ARCEM },
-    { "mav2hs", no_argument, NULL, OPTION_ARCHS },
-    { "muser-mode-only", no_argument, NULL, OPTION_USER_MODE },
-    { "mld-extension-reg-mask", required_argument, NULL, OPTION_LD_EXT_MASK },
-    { "mswap", no_argument, NULL, OPTION_SWAP },
-    { "mnorm", no_argument, NULL, OPTION_NORM },
-    { "mbarrel-shifter", no_argument, NULL, OPTION_BARREL_SHIFT },
-    { "mbarrel_shifter", no_argument, NULL, OPTION_BARREL_SHIFT },
-    { "mmin-max", no_argument, NULL, OPTION_MIN_MAX },
-    { "mmin_max", no_argument, NULL, OPTION_MIN_MAX },
-    { "mno-mpy", no_argument, NULL, OPTION_NO_MPY },
-    { "mea", no_argument, NULL, OPTION_EA },
-    { "mEA", no_argument, NULL, OPTION_EA },
-    { "mmul64", no_argument, NULL, OPTION_MUL64 },
-    { "msimd", no_argument, NULL, OPTION_SIMD},
-    { "mspfp", no_argument, NULL, OPTION_SPFP},
-    { "mspfp-compact", no_argument, NULL, OPTION_SPFP},
-    { "mspfp_compact", no_argument, NULL, OPTION_SPFP},
-    { "mspfp-fast", no_argument, NULL, OPTION_SPFP},
-    { "mspfp_fast", no_argument, NULL, OPTION_SPFP},
-    { "mdpfp", no_argument, NULL, OPTION_DPFP},
-    { "mdpfp-compact", no_argument, NULL, OPTION_DPFP},
-    { "mdpfp_compact", no_argument, NULL, OPTION_DPFP},
-    { "mdpfp-fast", no_argument, NULL, OPTION_DPFP},
-    { "mdpfp_fast", no_argument, NULL, OPTION_DPFP},
-    { "mmac-d16", no_argument, NULL, OPTION_XMAC_D16},
-    { "mmac_d16", no_argument, NULL, OPTION_XMAC_D16},
-    { "mmac-24", no_argument, NULL, OPTION_XMAC_24},
-    { "mmac_24", no_argument, NULL, OPTION_XMAC_24},
-    { "mdsp-packa", no_argument, NULL, OPTION_DSP_PACKA},
-    { "mdsp_packa", no_argument, NULL, OPTION_DSP_PACKA},
-    { "mcrc", no_argument, NULL, OPTION_CRC},
-    { "mdvbf", no_argument, NULL, OPTION_DVBF},
-    { "mtelephony", no_argument, NULL, OPTION_TELEPHONY},
-    { "mxy", no_argument, NULL, OPTION_XYMEMORY},
-    { "mlock", no_argument, NULL, OPTION_LOCK},
-    { "mswape", no_argument, NULL, OPTION_SWAPE},
-    { "mrtsc", no_argument, NULL, OPTION_RTSC},
-    { "mfpuda", no_argument, NULL, OPTION_FPUDA},
+  /* The following options are deprecated and provided here only for
+     compatibility reasons.  */
+  { "mav2em", no_argument, NULL, OPTION_ARCEM },
+  { "mav2hs", no_argument, NULL, OPTION_ARCHS },
+  { "muser-mode-only", no_argument, NULL, OPTION_USER_MODE },
+  { "mld-extension-reg-mask", required_argument, NULL, OPTION_LD_EXT_MASK },
+  { "mswap", no_argument, NULL, OPTION_SWAP },
+  { "mnorm", no_argument, NULL, OPTION_NORM },
+  { "mbarrel-shifter", no_argument, NULL, OPTION_BARREL_SHIFT },
+  { "mbarrel_shifter", no_argument, NULL, OPTION_BARREL_SHIFT },
+  { "mmin-max", no_argument, NULL, OPTION_MIN_MAX },
+  { "mmin_max", no_argument, NULL, OPTION_MIN_MAX },
+  { "mno-mpy", no_argument, NULL, OPTION_NO_MPY },
+  { "mea", no_argument, NULL, OPTION_EA },
+  { "mEA", no_argument, NULL, OPTION_EA },
+  { "mmul64", no_argument, NULL, OPTION_MUL64 },
+  { "msimd", no_argument, NULL, OPTION_SIMD},
+  { "mspfp", no_argument, NULL, OPTION_SPFP},
+  { "mspfp-compact", no_argument, NULL, OPTION_SPFP},
+  { "mspfp_compact", no_argument, NULL, OPTION_SPFP},
+  { "mspfp-fast", no_argument, NULL, OPTION_SPFP},
+  { "mspfp_fast", no_argument, NULL, OPTION_SPFP},
+  { "mdpfp", no_argument, NULL, OPTION_DPFP},
+  { "mdpfp-compact", no_argument, NULL, OPTION_DPFP},
+  { "mdpfp_compact", no_argument, NULL, OPTION_DPFP},
+  { "mdpfp-fast", no_argument, NULL, OPTION_DPFP},
+  { "mdpfp_fast", no_argument, NULL, OPTION_DPFP},
+  { "mmac-d16", no_argument, NULL, OPTION_XMAC_D16},
+  { "mmac_d16", no_argument, NULL, OPTION_XMAC_D16},
+  { "mmac-24", no_argument, NULL, OPTION_XMAC_24},
+  { "mmac_24", no_argument, NULL, OPTION_XMAC_24},
+  { "mdsp-packa", no_argument, NULL, OPTION_DSP_PACKA},
+  { "mdsp_packa", no_argument, NULL, OPTION_DSP_PACKA},
+  { "mcrc", no_argument, NULL, OPTION_CRC},
+  { "mdvbf", no_argument, NULL, OPTION_DVBF},
+  { "mtelephony", no_argument, NULL, OPTION_TELEPHONY},
+  { "mxy", no_argument, NULL, OPTION_XYMEMORY},
+  { "mlock", no_argument, NULL, OPTION_LOCK},
+  { "mswape", no_argument, NULL, OPTION_SWAPE},
+  { "mrtsc", no_argument, NULL, OPTION_RTSC},
+  { "mfpuda", no_argument, NULL, OPTION_FPUDA},
 
-    { NULL,		no_argument, NULL, 0 }
-  };
+  { NULL,		no_argument, NULL, 0 }
+};
 
 size_t md_longopts_size = sizeof (md_longopts);
 
@@ -354,19 +354,19 @@ static const struct arc_reloc_op_tag
   unsigned int complex_expr : 1;
 }
   arc_reloc_op[] =
-    {
-      DEF (gotoff,  BFD_RELOC_ARC_GOTOFF,	 1),
-      DEF (gotpc,   BFD_RELOC_ARC_GOTPC32,	 0),
-      DEF (plt,	    BFD_RELOC_ARC_PLT32,	 0),
-      DEF (sda,	    DUMMY_RELOC_ARC_ENTRY,	 1),
-      DEF (pcl,	    BFD_RELOC_ARC_PC32,		 1),
-      DEF (tlsgd,   BFD_RELOC_ARC_TLS_GD_GOT,	 0),
-      DEF (tlsie,   BFD_RELOC_ARC_TLS_IE_GOT,	 0),
-      DEF (tpoff9,  BFD_RELOC_ARC_TLS_LE_S9,	 0),
-      DEF (tpoff,   BFD_RELOC_ARC_TLS_LE_32,	 1),
-      DEF (dtpoff9, BFD_RELOC_ARC_TLS_DTPOFF_S9, 0),
-      DEF (dtpoff,  BFD_RELOC_ARC_TLS_DTPOFF,	 0),
-    };
+{
+  DEF (gotoff,  BFD_RELOC_ARC_GOTOFF,		1),
+  DEF (gotpc,   BFD_RELOC_ARC_GOTPC32,		0),
+  DEF (plt,	BFD_RELOC_ARC_PLT32,		0),
+  DEF (sda,	DUMMY_RELOC_ARC_ENTRY,		1),
+  DEF (pcl,	BFD_RELOC_ARC_PC32,		1),
+  DEF (tlsgd,   BFD_RELOC_ARC_TLS_GD_GOT,	0),
+  DEF (tlsie,   BFD_RELOC_ARC_TLS_IE_GOT,	0),
+  DEF (tpoff9,  BFD_RELOC_ARC_TLS_LE_S9,	0),
+  DEF (tpoff,   BFD_RELOC_ARC_TLS_LE_32,	0),
+  DEF (dtpoff9, BFD_RELOC_ARC_TLS_DTPOFF_S9,	0),
+  DEF (dtpoff,  BFD_RELOC_ARC_TLS_DTPOFF,	0),
+};
 
 static const int arc_num_reloc_op
 = sizeof (arc_reloc_op) / sizeof (*arc_reloc_op);
@@ -414,9 +414,7 @@ static const struct arc_opcode *find_special_case_pseudo (const char *,
    this function is used for regular 4 byte instructions as well.  */
 
 static void
-md_number_to_chars_midend (char *buf,
-			   valueT val,
-			   int n)
+md_number_to_chars_midend (char *buf, valueT val, int n)
 {
   if (n == 4)
     {
@@ -514,47 +512,28 @@ arc_option (int ignore ATTRIBUTE_UNUSED)
 
   c = get_symbol_name (&cpu);
   mach = arc_get_mach (cpu);
+  restore_line_pointer (c);
 
   if (mach == -1)
     goto bad_cpu;
 
   if (!mach_type_specified_p)
     {
-      if ((!strcmp ("ARC600", cpu))
-	  || (!strcmp ("ARC601", cpu))
-	  || (!strcmp ("A6", cpu)))
-	{
-	  md_parse_option (OPTION_MCPU, "arc600");
-	}
-      else if ((!strcmp ("ARC700", cpu))
-	       || (!strcmp ("A7", cpu)))
-	{
-	  md_parse_option (OPTION_MCPU, "arc700");
-	}
-      else if (!strcmp ("EM", cpu))
-	{
-	  md_parse_option (OPTION_MCPU, "arcem");
-	}
-      else if (!strcmp ("HS", cpu))
-	{
-	  md_parse_option (OPTION_MCPU, "archs");
-	}
-      else
-	as_fatal ("could not find the architecture");
-
+      arc_mach_type = mach;
       if (!bfd_set_arch_mach (stdoutput, bfd_arch_arc, mach))
 	as_fatal ("could not set architecture and machine");
+
+      mach_type_specified_p = 1;
     }
   else
     if (arc_mach_type != mach)
       as_warn ("Command-line value overrides \".cpu\" directive");
 
-  restore_line_pointer (c);
   demand_empty_rest_of_line ();
+
   return;
 
  bad_cpu:
-  restore_line_pointer (c);
   as_bad ("invalid identifier for \".cpu\"");
   ignore_rest_of_line ();
 }
@@ -985,7 +964,7 @@ static void
 declare_register_set (void)
 {
   int i;
-  for (i = 0; i < 64; ++i)
+  for (i = 0; i < 32; ++i)
     {
       char name[7];
 
@@ -1126,10 +1105,11 @@ md_pcrel_from_section (fixS *fixP,
 	case BFD_RELOC_ARC_PC32:
 	  /* The hardware calculates relative to the start of the
 	     insn, but this relocation is relative to location of the
-	     LIMM, compensate.  The base always needs to be
+	     LIMM, compensate.  TIP: the base always needs to be
 	     substracted by 4 as we do not support this type of PCrel
 	     relocation for short instructions.  */
-	  base -= 4;
+	  base -= fixP->fx_where - fixP->fx_dot_value;
+	  gas_assert ((fixP->fx_where - fixP->fx_dot_value) == 4);
 	  /* Fall through.  */
 	case BFD_RELOC_ARC_PLT32:
 	case BFD_RELOC_ARC_S25H_PCREL_PLT:
@@ -1303,9 +1283,7 @@ md_apply_fix (fixS *fixP,
     {
     case BFD_RELOC_ARC_TLS_DTPOFF:
     case BFD_RELOC_ARC_TLS_LE_32:
-      /* Note: those two relocations were setting the insn immediate
-	 with the value of the addendum in the old assembler.  Now, we
-	 just let the addendum where it is.  */
+      fixP->fx_offset = 0;
       /* Fall through.  */
     case BFD_RELOC_ARC_TLS_GD_GOT:
     case BFD_RELOC_ARC_TLS_IE_GOT:
@@ -1771,7 +1749,7 @@ md_parse_option (int c, char *arg ATTRIBUTE_UNUSED)
       /* Dummy options.  */
 
     default:
-      break;
+      return 0;
     }
 
   if (cpu_flags != EF_ARC_CPU_GENERIC)
@@ -1952,7 +1930,7 @@ pseudo_operand_match (const expressionS *tok,
 	ret = 1;
       else if (!(operand_real->flags & ARC_OPERAND_IR))
 	{
-	  val = tok->X_add_number + op->count;
+	  val = tok->X_add_number;
 	  if (operand_real->flags & ARC_OPERAND_SIGNED)
 	    {
 	      max = (1 << (operand_real->bits - 1)) - 1;
@@ -2561,7 +2539,7 @@ find_reloc (const char *name,
 {
   unsigned int i;
   int j;
-  bfd_boolean found_flag, tmp;
+  bfd_boolean found_flag;
   extended_bfd_reloc_code_real_type ret = BFD_RELOC_UNUSED;
 
   for (i = 0; i < arc_num_equiv_tab; i++)
@@ -2573,34 +2551,17 @@ find_reloc (const char *name,
 	continue;
       if (r->mnemonic && (strcmp (r->mnemonic, opcodename)))
 	continue;
-      if (r->flags[0])
+      if (r->flagcode)
 	{
 	  if (!nflg)
 	    continue;
 	  found_flag = FALSE;
-	  unsigned * psflg = (unsigned *)r->flags;
-	  do
-	    {
-	      tmp = FALSE;
-	      for (j = 0; j < nflg; j++)
-		if (!strcmp (pflags[j].name,
-			     arc_flag_operands[*psflg].name))
-		  {
-		    tmp = TRUE;
-		    break;
-		  }
-	      if (!tmp)
-		{
-		  found_flag = FALSE;
-		  break;
-		}
-	      else
-		{
-		  found_flag = TRUE;
-		}
-	      ++ psflg;
-	    } while (*psflg);
-
+	  for (j = 0; j < nflg; j++)
+	    if (pflags[i].code == r->flagcode)
+	      {
+		found_flag = TRUE;
+		break;
+	      }
 	  if (!found_flag)
 	    continue;
 	}
