@@ -672,7 +672,7 @@ get_middle_endian_relocation (bfd_vma reloc)
 #define A (reloc_data.reloc_addend)
 #define B (0)
 #define G (reloc_data.got_offset_value)
-#define GOT (reloc_data.got_symbol_vma + 12)
+#define GOT (reloc_data.got_symbol_vma)
 #define MES (0)
 	/* P: relative offset to PCL The offset should be to the current location
 	   aligned to 32 bits.  */
@@ -1003,6 +1003,9 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	}
       else /* Global symbol.  */
 	{
+	  struct dynamic_sections ds =
+	    arc_create_dynamic_sections (output_bfd, info);
+
 	  /* Get the symbol's entry in the symtab.  */
 	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
 
@@ -1120,9 +1123,6 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 
 	      if (is_reloc_for_GOT (howto) && !bfd_link_pic (info))
 		{
-		  struct dynamic_sections ds =
-		  arc_create_dynamic_sections (output_bfd, info);
-
 		  /* TODO: Change it to use arc_do_relocation with ARC_32
 		   * reloc. Try to use ADD_RELA macro. */
 		  bfd_vma relocation =
@@ -1142,8 +1142,6 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		continue;
 	      else
 		{
-		  struct dynamic_sections ds = 
-		      arc_create_dynamic_sections (output_bfd, info);
 		  reloc_data.sym_value = h->root.u.def.value;
 		  reloc_data.sym_section = ds.sgot;
 	      	  reloc_data.should_relocate = TRUE;
@@ -1153,9 +1151,6 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	    {
 	      if (is_reloc_for_GOT (howto))
 		{
-		  struct dynamic_sections ds =
-		      arc_create_dynamic_sections (output_bfd, info);
-
 		  reloc_data.sym_value = h->root.u.def.value;
 		  reloc_data.sym_section = ds.sgot;
 
@@ -1163,9 +1158,6 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		}
 	      else if (is_reloc_for_PLT (howto))
 		{
-		  struct dynamic_sections ds =
-		    arc_create_dynamic_sections (output_bfd, info);
-
 		  reloc_data.sym_value = h->plt.offset;
 		  reloc_data.sym_section = ds.splt;
 
@@ -1180,6 +1172,9 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	    }
 
 	  reloc_data.got_offset_value = h->got.offset;
+          if(ds.sgot != NULL)
+	    reloc_data.got_symbol_vma = ds.sgot->output_section->vma + ds.sgot->output_offset;
+
 	}
 
       if (is_reloc_SDA_relative (howto) && reloc_data.sdata_begin_symbol_vma_set == FALSE)
