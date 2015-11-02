@@ -87,6 +87,45 @@ const char * dyn_section_names[DYN_SECTION_TYPES_END] =
   ".rela.plt"
 };
 
+enum tls_type_e { GOT_UNKNOWN = 0, GOT_NORMAL, GOT_TLS_GD, GOT_TLS_IE, GOT_TLS_LE };
+
+struct got_entry
+{
+  struct got_entry *next;
+  enum tls_type_e type;
+  bfd_vma offset;
+};
+
+static void
+new_got_entry_to_list(struct got_entry **list, 
+		      enum tls_type_e type, 
+		      bfd_vma offset) 
+{
+  struct got_entry *entry = (struct got_entry *) malloc(sizeof(struct got_entry));
+
+  entry->type = type;
+  entry->offset = offset;
+  entry->next = NULL;
+
+  /* Add new entry to the list */
+  struct got_entry **p = list;
+  while(*p != NULL)
+    p = &((*p)->next);
+  *p = entry;
+}
+
+bfd_boolean
+symbol_has_entry_of_type(struct got_entry *list, enum tls_type_e type)
+{
+  while(list != NULL) {
+    if(list->type == type)
+      return TRUE;
+    list = list->next;
+  }
+
+  return FALSE;
+}
+
 /* The default symbols representing the init and fini dyn values.
    TODO: Check what is the relation of those strings with arclinux.em
    and DT_INIT.  */
@@ -136,6 +175,8 @@ is_reloc_SDA_relative (reloc_howto_type *howto)
 static bfd_boolean
 is_reloc_for_GOT (reloc_howto_type * howto)
 {
+  if(strstr(howto->name, "TLS") != NULL)
+    return FALSE;
   return (strstr (howto->name, "GOT") != NULL) ? TRUE : FALSE;
 }
 
@@ -143,6 +184,12 @@ static bfd_boolean
 is_reloc_for_PLT (reloc_howto_type * howto)
 {
   return (strstr (howto->name, "PLT") != NULL) ? TRUE : FALSE;
+}
+
+static bfd_boolean
+is_reloc_for_TLS (reloc_howto_type *howto)
+{
+  return (strstr (howto->name, "TLS") != NULL) ? TRUE : FALSE;
 }
 
 #define arc_bfd_get_8(A,B,C) bfd_get_8(A,B)
@@ -693,6 +740,7 @@ get_middle_endian_relocation (bfd_vma reloc)
 #define _SDA_BASE_ (reloc_data.sdata_begin_symbol_vma)	
 #define TLS_REL (elf_hash_table(info)->tls_sec->output_section->vma)
 #define _SDA_BASE_ (reloc_data.sdata_begin_symbol_vma)
+#define TLS_TBSS (8) // TCB_BASE_OFFSET + TCB_SIZE
 
 #define none (0)
 
@@ -848,27 +896,27 @@ arc_do_relocation (bfd_byte * contents, struct arc_relocation_data reloc_data, s
 
 #undef ARC_RELOC_HOWTO
 
-static bfd_vma *
-arc_get_local_got_offsets (bfd * abfd)
+static struct got_entry **
+arc_get_local_got_ents (bfd * abfd)
 {
-  static bfd_vma *local_got_offsets = NULL;
+  static struct got_entry **local_got_ents = NULL;
 
-  if (local_got_offsets == NULL)
+  if (local_got_ents == NULL)
     {
       size_t	   size;
       unsigned int i;
       Elf_Internal_Shdr *symtab_hdr = &((elf_tdata (abfd))->symtab_hdr);
 
       size = symtab_hdr->sh_info * sizeof (bfd_vma);
-      local_got_offsets = (bfd_vma *) bfd_alloc (abfd, size);
-      if (local_got_offsets == NULL)
+      local_got_ents = (bfd_vma *) bfd_alloc (abfd, sizeof(struct got_entry *) * size);
+      if (local_got_ents == NULL)
 	return FALSE;
-      elf_local_got_offsets (abfd) = local_got_offsets;
-      for (i = 0; i < symtab_hdr->sh_info; i++)
-	local_got_offsets[i] = (bfd_vma) - 1;
+
+      memset(local_got_ents, 0, sizeof(struct got_entry *) * size);
+      elf_local_got_ents (abfd) = local_got_ents;
     }
 
-  return local_got_offsets;
+  return local_got_ents;
 }
 
 
@@ -898,7 +946,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 {
   Elf_Internal_Shdr *           symtab_hdr;
   struct elf_link_hash_entry ** sym_hashes;
-  bfd_vma *                     local_got_offsets;
+  struct got_entry **           local_got_ents;
   Elf_Internal_Rela *           rel;
   Elf_Internal_Rela *           relend;
 
@@ -972,7 +1020,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	      (h2->root.u.def.value +
 	       h2->root.u.def.section->output_section->vma);
 	}
-
+  
 
       reloc_data.input_section = input_section;
       reloc_data.howto = howto;
@@ -995,8 +1043,8 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 
 	  if (is_reloc_for_GOT (reloc_data.howto))
 	    {
-	      local_got_offsets = arc_get_local_got_offsets (output_bfd);
-	      reloc_data.got_offset_value = local_got_offsets[r_symndx];
+	      local_got_ents = arc_get_local_got_ents (output_bfd);
+	      reloc_data.got_offset_value = local_got_ents[r_symndx]->offset;
 	    }
 
 	  reloc_data.should_relocate = TRUE;
@@ -1123,6 +1171,8 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 
 	      if (is_reloc_for_GOT (howto) && !bfd_link_pic (info))
 		{
+
+
 		  /* TODO: Change it to use arc_do_relocation with ARC_32
 		   * reloc. Try to use ADD_RELA macro. */
 		  bfd_vma relocation =
@@ -1131,8 +1181,10 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 			(reloc_data.sym_section->output_offset
 		         + reloc_data.sym_section->output_section->vma)
 		      : 0);
-
-		  bfd_put_32 (output_bfd, relocation, ds.sgot->contents + h->got.offset);
+		  
+		  BFD_ASSERT(h->got.glist);
+		  bfd_vma got_offset = h->got.glist->offset;
+		  bfd_put_32 (output_bfd, relocation, ds.sgot->contents + got_offset);
 		}
 	    }
 	  else if (h->root.type == bfd_link_hash_undefweak)
@@ -1171,7 +1223,15 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		}
 	    }
 
-	  reloc_data.got_offset_value = h->got.offset;
+	  if(h->got.glist != NULL)
+	    {
+	      struct got_entry *entry = h->got.glist;
+	      if(is_reloc_for_TLS(howto))
+		while(entry->type == GOT_NORMAL && entry->next != NULL)
+		  entry = entry->next;
+	      reloc_data.got_offset_value = entry->offset;
+	      fprintf(stderr, "GOT_ENTRY = %d, offset = %d\n", entry->type, entry->offset);
+	    }
           if(ds.sgot != NULL)
 	    reloc_data.got_symbol_vma = ds.sgot->output_section->vma + ds.sgot->output_offset;
 
@@ -1309,7 +1369,7 @@ elf_arc_check_relocs (bfd *                      abfd,
 {
   Elf_Internal_Shdr *		symtab_hdr;
   struct elf_link_hash_entry **	sym_hashes;
-  bfd_vma	 *		local_got_offsets;
+  struct got_entry **		local_got_ents;
   const Elf_Internal_Rela *	rel;
   const Elf_Internal_Rela *	rel_end;
   bfd *				dynobj ATTRIBUTE_UNUSED;
@@ -1321,7 +1381,7 @@ elf_arc_check_relocs (bfd *                      abfd,
   dynobj = (elf_hash_table (info))->dynobj;
   symtab_hdr = &((elf_tdata (abfd))->symtab_hdr);
   sym_hashes = elf_sym_hashes (abfd);
-  local_got_offsets = arc_get_local_got_offsets (abfd);
+  local_got_ents = arc_get_local_got_ents (abfd);
 
   struct dynamic_sections ds = arc_create_dynamic_sections (abfd, info);
 
@@ -1420,16 +1480,53 @@ elf_arc_check_relocs (bfd *                      abfd,
 	  if (h == NULL)
 	    {
 	      /* Local symbol.  */
-	      local_got_offsets[r_symndx] =
-		ADD_SYMBOL_REF_SEC_AND_RELOC (got, bfd_link_pic (info), NULL);
+	      bfd_vma offset = ADD_SYMBOL_REF_SEC_AND_RELOC (got, bfd_link_pic (info), NULL);
+	      new_got_entry_to_list(&(local_got_ents[r_symndx]), GOT_NORMAL, offset);
 	    }
 	  else
 	    {
 	      /* Global symbol.  */
 	      h = sym_hashes[r_symndx - symtab_hdr->sh_info];
-	      h->got.offset =
+	      //h->got.offset =
+	      bfd_vma offset = 
 		ADD_SYMBOL_REF_SEC_AND_RELOC (got, TRUE, h);
+	      new_got_entry_to_list(&h->got.glist, GOT_NORMAL, offset);
 	    }
+	}
+
+      if (is_reloc_for_TLS(howto) == TRUE && h != NULL)
+	{
+	  enum tls_type_e type = GOT_UNKNOWN;
+	  switch(r_type) 
+	    {
+	      case R_ARC_TLS_GD_GOT:
+		type = GOT_TLS_GD;
+		break;
+	      case R_ARC_TLS_IE_GOT:
+		type = GOT_TLS_IE;
+		break;
+	      default:
+		break;
+	    }
+
+	  struct got_entry **list = NULL;
+	  //if(h != NULL)
+	    list = &(h->got.glist);
+	  //else
+	  //  list = &(local_got_ents[r_symndx]);
+
+	  if(type != GOT_UNKNOWN && !symbol_has_entry_of_type(*list, type)) 
+	    {
+	      bfd_vma offset = 
+		ADD_SYMBOL_REF_SEC_AND_RELOC (got, TRUE, h);
+	      new_got_entry_to_list(list, type, offset);
+
+	      if(type == GOT_TLS_GD && !SYMBOL_REFERENCES_LOCAL(info, h))
+		{
+		  ADD_SYMBOL_REF_SEC_AND_RELOC (got, TRUE, h);
+		}
+	    }
+	  
 	}
     }
 
@@ -1823,18 +1920,52 @@ elf_arc_finish_dynamic_symbol (bfd * output_bfd,
 	}
     }
 
-  if (h->got.offset != (bfd_vma) -1)
+  //if (h->got.offset != (bfd_vma) -1)
+  if (h->got.glist != NULL)
     {
-      if (bfd_link_pic (info) && (info->symbolic || h->dynindx == -1)
-	  && h->def_regular)
+      struct got_entry *list = h->got.glist;
+
+      /* Traverse the list of got entries for this symbol */
+      while(list) 
 	{
-	  ADD_RELA (output_bfd, got, h->got.offset, 0, R_ARC_RELATIVE, 0);
-	}
-      else
-	{
-	  ADD_RELA (output_bfd, got, h->got.offset, h->dynindx,
-		    R_ARC_GLOB_DAT, 0);
-	}
+	  bfd_vma got_offset = h->got.glist->offset;
+
+	  if(list->type == GOT_NORMAL) 
+	    {
+              if (bfd_link_pic (info) && (info->symbolic || h->dynindx == -1)
+	          && h->def_regular)
+	        {
+      	          ADD_RELA (output_bfd, got, got_offset, 0, R_ARC_RELATIVE, 0);
+      	        }
+              else
+	        {
+      	          ADD_RELA (output_bfd, got, got_offset, h->dynindx,
+	          	  R_ARC_GLOB_DAT, 0);
+      	        }
+	    }
+	  else if (list->type == GOT_TLS_GD)
+	    {
+	      if (SYMBOL_REFERENCES_LOCAL (info, h))
+		{
+		  ADD_RELA (output_bfd, got, got_offset, 0, R_ARC_TLS_DTPMOD, 0);
+		}
+	      else
+		{
+		  ADD_RELA (output_bfd, got, got_offset, h->dynindx, R_ARC_TLS_DTPMOD, 0);
+	      	  ADD_RELA (output_bfd, got, got_offset+4, h->dynindx, R_ARC_TLS_DTPOFF, 0);
+		}
+	    }
+	  else if (list->type == GOT_TLS_IE)
+	    {
+	      bfd_vma index = h->dynindx == -1 ? 0 : h->dynindx;
+	      // TODO: The addend is not always 0
+      	      ADD_RELA (output_bfd, got, got_offset, index, R_ARC_TLS_TPOFF, 0);
+	    }
+
+	  list = list->next;
+      	}
+
+      h->got.glist = NULL;
     }
   if (h->needs_copy)
     {
@@ -2479,5 +2610,32 @@ const struct elf_size_info arc_elf32_size_info =
 };
 
 #define elf_backend_size_info		arc_elf32_size_info
+
+static struct bfd_link_hash_table *
+arc_elf_link_hash_table_create (bfd *abfd)
+{
+  struct elf_link_hash_table *htab;
+
+  htab = bfd_zmalloc (sizeof (*htab));
+  if (htab == NULL)
+    return NULL;
+
+  if (!_bfd_elf_link_hash_table_init (htab, abfd,
+				      _bfd_elf_link_hash_newfunc,
+				      sizeof (struct elf_link_hash_entry),
+				      GENERIC_ELF_DATA))
+    {
+      free (htab);
+      return NULL;
+    }
+
+  htab->init_got_refcount.refcount = 0;
+  htab->init_got_refcount.glist = NULL;
+  htab->init_got_offset.offset = 0;
+  htab->init_got_offset.glist = NULL;
+  return htab;
+}
+
+#define bfd_elf32_bfd_link_hash_table_create	arc_elf_link_hash_table_create
 
 #include "elf32-target.h"

@@ -395,7 +395,7 @@ ARC_RELOC_HOWTO(ARC_TLS_GD_GOT, 69, \
                 32, \
                 replace_word32, \
                 dont, \
-                ( ( GOT + A ) - P ))
+                ( G + GOT - P))
 
 ARC_RELOC_HOWTO(ARC_TLS_GD_LD, 70, \
                 2, \
@@ -416,7 +416,7 @@ ARC_RELOC_HOWTO(ARC_TLS_IE_GOT, 72, \
                 32, \
                 replace_word32, \
                 dont, \
-                ( ( GOT + A ) - P ))
+                ( G + GOT - P))
 
 ARC_RELOC_HOWTO(ARC_TLS_DTPOFF, 67, \
                 2, \
