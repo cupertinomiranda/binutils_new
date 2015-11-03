@@ -35,6 +35,35 @@
 #define DEBUG(...) printf (__ARGV__)
 #define DEBUG_ARC_RELOC(A)
 
+
+#define ADD_RELA(BFD, SECTION, OFFSET, SYM_IDX, TYPE, ADDEND) \
+{\
+  struct dynamic_sections _ds = arc_create_dynamic_sections (output_bfd, info); \
+  bfd_vma loc = (bfd_vma) _ds.srel##SECTION->contents + ((_ds.srel##SECTION->reloc_count++) * sizeof (Elf32_External_Rela)); \
+  Elf_Internal_Rela rel; \
+  /* Do Relocation */ \
+  /* bfd_put_32 (output_bfd, (bfd_vma) 0, _ds.s##SECTION->contents + OFFSET); */\
+  rel.r_addend = ADDEND; \
+  rel.r_offset = (_ds.s##SECTION)->output_section->vma + (_ds.s##SECTION)->output_offset + OFFSET; \
+  rel.r_info = ELF32_R_INFO (SYM_IDX, TYPE); \
+  bfd_elf32_swap_reloca_out (BFD, &rel, (bfd_byte *) loc); \
+}
+
+#define ADD_RELA_NEW(BFD, SECTION, OFFSET, SYM_IDX, TYPE, ADDEND) \
+{\
+  struct dynamic_sections _ds = arc_create_dynamic_sections (output_bfd, info); \
+  bfd_vma loc = (bfd_vma) _ds.srel##SECTION->contents + (_ds.srel##SECTION->reloc_count * sizeof (Elf32_External_Rela)); \
+  _ds.srel##SECTION->reloc_count++; \
+  Elf_Internal_Rela rel; \
+  rel.r_addend = ADDEND; \
+  rel.r_offset = OFFSET; \
+  rel.r_info = ELF32_R_INFO (SYM_IDX, TYPE); \
+  bfd_elf32_swap_reloca_out (BFD, &rel, (bfd_byte *) loc); \
+}
+
+
+
+
 struct arc_local_data
 {
   bfd_vma	  sdata_begin_symbol_vma;
@@ -94,6 +123,7 @@ struct got_entry
   struct got_entry *next;
   enum tls_type_e type;
   bfd_vma offset;
+  bfd_boolean processed;
 };
 
 static void
@@ -106,6 +136,7 @@ new_got_entry_to_list(struct got_entry **list,
   entry->type = type;
   entry->offset = offset;
   entry->next = NULL;
+  entry->processed = FALSE;
 
   /* Add new entry to the list */
   struct got_entry **p = list;
@@ -1035,17 +1066,64 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 
       if (r_symndx < symtab_hdr->sh_info) /* A local symbol.  */
 	{
+	  struct dynamic_sections ds =
+	    arc_create_dynamic_sections (output_bfd, info);
+
+	  local_got_ents = arc_get_local_got_ents (output_bfd);
+	  struct got_entry *entry = local_got_ents[r_symndx];
+
 	  sym = local_syms + r_symndx;
 	  sec = local_sections[r_symndx];
 
 	  reloc_data.sym_value = sym->st_value;
 	  reloc_data.sym_section = sec;
 
-	  if (is_reloc_for_GOT (reloc_data.howto))
+	  if ((is_reloc_for_GOT (howto) || is_reloc_for_TLS(howto)) && entry != NULL)
 	    {
-	      local_got_ents = arc_get_local_got_ents (output_bfd);
-	      reloc_data.got_offset_value = local_got_ents[r_symndx]->offset;
+	      if(is_reloc_for_TLS(howto))
+		while(entry->type == GOT_NORMAL && entry->next != NULL)
+		  entry = entry->next;
+		
+	      //if(bfd_link_pic(info)) 
+		{
+		  if(entry->type == GOT_TLS_GD && entry->processed == FALSE)
+		    {
+		      // Create dynamic relocation for local sym
+		      ADD_RELA (output_bfd, got, entry->offset, 0, R_ARC_TLS_DTPMOD, 0);
+		      //ADD_RELA (output_bfd, got, entry->offset+4, 0, R_ARC_TLS_DTPOFF, 0);
+
+	    	      bfd_vma sec_vma = sec->output_section->vma + sec->output_offset;
+	    	      bfd_put_32(output_bfd, reloc_data.sym_value - sec_vma, ds.sgot + entry->offset + 4);
+
+		      entry->processed = TRUE;
+		    }
+	    	}
+
+	      reloc_data.got_offset_value = entry->offset;
+	      fprintf(stderr, "GOT_ENTRY = %d, offset = %d\n", entry->type, entry->offset);
+
+
+	//      if (is_reloc_for_GOT (howto) && !bfd_link_pic (info))
+	//	{
+
+
+	//	  /* TODO: Change it to use arc_do_relocation with ARC_32
+	//	   * reloc. Try to use ADD_RELA macro. */
+	//	  bfd_vma relocation =
+	//	    reloc_data.sym_value + reloc_data.reloc_addend
+	//	    + (reloc_data.sym_section->output_section != NULL ? 
+	//		(reloc_data.sym_section->output_offset
+	//	         + reloc_data.sym_section->output_section->vma)
+	//	      : 0);
+	//	  
+	//	  BFD_ASSERT(h->got.glist);
+	//	  bfd_vma got_offset = h->got.glist->offset;
+	//	  bfd_put_32 (output_bfd, relocation, ds.sgot->contents + got_offset);
+	//	}
 	    }
+
+          if(ds.sgot != NULL)
+	    reloc_data.got_symbol_vma = ds.sgot->output_section->vma + ds.sgot->output_offset;
 
 	  reloc_data.should_relocate = TRUE;
 	}
@@ -1227,8 +1305,10 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	    {
 	      struct got_entry *entry = h->got.glist;
 	      if(is_reloc_for_TLS(howto))
+	      {
 		while(entry->type == GOT_NORMAL && entry->next != NULL)
 		  entry = entry->next;
+	      }
 	      reloc_data.got_offset_value = entry->offset;
 	      fprintf(stderr, "GOT_ENTRY = %d, offset = %d\n", entry->type, entry->offset);
 	    }
@@ -1494,9 +1574,10 @@ elf_arc_check_relocs (bfd *                      abfd,
 	    }
 	}
 
-      if (is_reloc_for_TLS(howto) == TRUE && h != NULL)
+      if (is_reloc_for_TLS(howto) == TRUE)
 	{
 	  enum tls_type_e type = GOT_UNKNOWN;
+
 	  switch(r_type) 
 	    {
 	      case R_ARC_TLS_GD_GOT:
@@ -1510,10 +1591,10 @@ elf_arc_check_relocs (bfd *                      abfd,
 	    }
 
 	  struct got_entry **list = NULL;
-	  //if(h != NULL)
+	  if(h != NULL)
 	    list = &(h->got.glist);
-	  //else
-	  //  list = &(local_got_ents[r_symndx]);
+	  else
+	    list = &(local_got_ents[r_symndx]);
 
 	  if(type != GOT_UNKNOWN && !symbol_has_entry_of_type(*list, type)) 
 	    {
@@ -1521,7 +1602,7 @@ elf_arc_check_relocs (bfd *                      abfd,
 		ADD_SYMBOL_REF_SEC_AND_RELOC (got, TRUE, h);
 	      new_got_entry_to_list(list, type, offset);
 
-	      if(type == GOT_TLS_GD && !SYMBOL_REFERENCES_LOCAL(info, h))
+	      //if(type == GOT_TLS_GD && !SYMBOL_REFERENCES_LOCAL(info, h))
 		{
 		  ADD_SYMBOL_REF_SEC_AND_RELOC (got, TRUE, h);
 		}
@@ -1637,33 +1718,6 @@ plt_do_relocs_for_symbol (bfd *abfd,
       reloc = &(reloc[1]);	/* Jump to next relocation.  */
     }
 }
-
-#define ADD_RELA(BFD, SECTION, OFFSET, SYM_IDX, TYPE, ADDEND) \
-{\
-  struct dynamic_sections _ds = arc_create_dynamic_sections (output_bfd, info); \
-  bfd_vma loc = (bfd_vma) _ds.srel##SECTION->contents + ((_ds.srel##SECTION->reloc_count++) * sizeof (Elf32_External_Rela)); \
-  Elf_Internal_Rela rel; \
-  /* Do Relocation */ \
-  /* bfd_put_32 (output_bfd, (bfd_vma) 0, _ds.s##SECTION->contents + OFFSET); */\
-  rel.r_addend = ADDEND; \
-  rel.r_offset = (_ds.s##SECTION)->output_section->vma + (_ds.s##SECTION)->output_offset + OFFSET; \
-  rel.r_info = ELF32_R_INFO (SYM_IDX, TYPE); \
-  bfd_elf32_swap_reloca_out (BFD, &rel, (bfd_byte *) loc); \
-}
-
-#define ADD_RELA_NEW(BFD, SECTION, OFFSET, SYM_IDX, TYPE, ADDEND) \
-{\
-  struct dynamic_sections _ds = arc_create_dynamic_sections (output_bfd, info); \
-  bfd_vma loc = (bfd_vma) _ds.srel##SECTION->contents + (_ds.srel##SECTION->reloc_count * sizeof (Elf32_External_Rela)); \
-  _ds.srel##SECTION->reloc_count++; \
-  Elf_Internal_Rela rel; \
-  rel.r_addend = ADDEND; \
-  rel.r_offset = OFFSET; \
-  rel.r_info = ELF32_R_INFO (SYM_IDX, TYPE); \
-  bfd_elf32_swap_reloca_out (BFD, &rel, (bfd_byte *) loc); \
-}
-
-
 
 static void
 relocate_plt_for_symbol (bfd *output_bfd, 
@@ -1945,11 +1999,11 @@ elf_arc_finish_dynamic_symbol (bfd * output_bfd,
 	    }
 	  else if (list->type == GOT_TLS_GD)
 	    {
-	      if (SYMBOL_REFERENCES_LOCAL (info, h))
-		{
-		  ADD_RELA (output_bfd, got, got_offset, 0, R_ARC_TLS_DTPMOD, 0);
-		}
-	      else
+	      //if (SYMBOL_REFERENCES_LOCAL (info, h))
+	      //  {
+	      //    ADD_RELA (output_bfd, got, got_offset, 0, R_ARC_TLS_DTPMOD, 0);
+	      //  }
+	      //else
 		{
 		  ADD_RELA (output_bfd, got, got_offset, h->dynindx, R_ARC_TLS_DTPMOD, 0);
 	      	  ADD_RELA (output_bfd, got, got_offset+4, h->dynindx, R_ARC_TLS_DTPOFF, 0);
