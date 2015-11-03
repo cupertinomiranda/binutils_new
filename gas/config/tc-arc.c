@@ -363,7 +363,7 @@ static const struct arc_reloc_op_tag
       DEF (tlsgd,   BFD_RELOC_ARC_TLS_GD_GOT,	 0),
       DEF (tlsie,   BFD_RELOC_ARC_TLS_IE_GOT,	 0),
       DEF (tpoff9,  BFD_RELOC_ARC_TLS_LE_S9,	 0),
-      DEF (tpoff,   BFD_RELOC_ARC_TLS_LE_32,	 0),
+      DEF (tpoff,   BFD_RELOC_ARC_TLS_LE_32,	 1),
       DEF (dtpoff9, BFD_RELOC_ARC_TLS_DTPOFF_S9, 0),
       DEF (dtpoff,  BFD_RELOC_ARC_TLS_DTPOFF,	 0),
     };
@@ -1285,7 +1285,9 @@ md_apply_fix (fixS *fixP,
     {
     case BFD_RELOC_ARC_TLS_DTPOFF:
     case BFD_RELOC_ARC_TLS_LE_32:
-      fixP->fx_offset = 0;
+      /* Note: those two relocations were setting the insn immediate
+	 with the value of the addendum in the old assembler.  Now, we
+	 just let the addendum where it is.  */
       /* Fall through.  */
     case BFD_RELOC_ARC_TLS_GD_GOT:
     case BFD_RELOC_ARC_TLS_IE_GOT:
