@@ -385,7 +385,7 @@ arc_elf_set_private_flags (bfd *abfd, flagword flags)
   return TRUE;
 }
 
-/* Print private flags. */
+/* Print private flags.  */
 static bfd_boolean
 arc_elf_print_private_bfd_data (bfd *abfd, void * ptr)
 {
@@ -402,13 +402,14 @@ arc_elf_print_private_bfd_data (bfd *abfd, void * ptr)
 
   switch (flags & EF_ARC_MACH_MSK)
     {
-    case EF_ARC_CPU_GENERIC : fprintf (file, " -mcpu=generic/A4"); break;
+    case EF_ARC_CPU_GENERIC : fprintf (file, " -mcpu=generic"); break;
     case EF_ARC_CPU_ARCV2HS : fprintf (file, " -mcpu=ARCv2HS");    break;
     case EF_ARC_CPU_ARCV2EM : fprintf (file, " -mcpu=ARCv2EM");    break;
     case E_ARC_MACH_ARC600  : fprintf (file, " -mcpu=ARC600");     break;
     case E_ARC_MACH_ARC601  : fprintf (file, " -mcpu=ARC601");     break;
     case E_ARC_MACH_ARC700  : fprintf (file, " -mcpu=ARC700");     break;
     default:
+      fprintf (file, "-mcpu=unknown");
       break;
     }
 
@@ -417,7 +418,9 @@ arc_elf_print_private_bfd_data (bfd *abfd, void * ptr)
     case E_ARC_OSABI_ORIG : fprintf (file, " (ABI:legacy)"); break;
     case E_ARC_OSABI_V2   : fprintf (file, " (ABI:v2)");     break;
     case E_ARC_OSABI_V3   : fprintf (file, " (ABI:v3)");     break;
-    default: break;
+    default:
+      fprintf (file, "(ABI:unknown)");
+      break;
     }
 
   fputc ('\n', file);
@@ -480,44 +483,58 @@ arc_elf_merge_private_bfd_data (bfd *ibfd, bfd *obfd)
 {
   unsigned short mach_ibfd;
   static unsigned short mach_obfd = EM_NONE;
-  flagword old_flags;
-  flagword new_flags;
+  flagword out_flags;
+  flagword in_flags;
+  asection *sec;
+
+   /* Check if we have the same endianess.  */
+  if (! _bfd_generic_verify_endian_match (ibfd, obfd))
+    {
+      _bfd_error_handler (_("ERROR: Endian Match failed . Attempting to link "
+			    "%B with binary %s of opposite endian-ness"),
+			  ibfd, bfd_get_filename (obfd));
+      return FALSE;
+    }
 
   /* Collect ELF flags. */
-  new_flags = elf_elfheader (ibfd)->e_flags & EF_ARC_MACH_MSK;
-  old_flags = elf_elfheader (obfd)->e_flags & EF_ARC_MACH_MSK;
-
-#if DEBUG
-  (*_bfd_error_handler) ("old_flags = 0x%.8lx, new_flags = 0x%.8lx, init = %s, filename = %s",
-			 old_flags, new_flags, elf_flags_init (obfd) ? "yes" : "no",
-			 bfd_get_filename (ibfd));
-#endif
+  in_flags = elf_elfheader (ibfd)->e_flags & EF_ARC_MACH_MSK;
+  out_flags = elf_elfheader (obfd)->e_flags & EF_ARC_MACH_MSK;
 
   if (!elf_flags_init (obfd))			/* First call, no flags set.  */
     {
       elf_flags_init (obfd) = TRUE;
-      old_flags = new_flags;
+      out_flags = in_flags;
     }
 
   if (bfd_get_flavour (ibfd) != bfd_target_elf_flavour
       || bfd_get_flavour (obfd) != bfd_target_elf_flavour)
     return TRUE;
 
-  if (bfd_count_sections (ibfd) == 0)
-    return TRUE ; /* For the case of empty archive files */
-
-  mach_ibfd = elf_elfheader (ibfd)->e_machine;
-
-   /* Check if we have the same endianess.  */
-  if (! _bfd_generic_verify_endian_match (ibfd, obfd))
+  /* Check to see if the input BFD actually contains any sections.  Do
+     not short-circuit dynamic objects; their section list may be
+     emptied by elf_link_add_object_symbols.  */
+  if (!(ibfd->flags & DYNAMIC))
     {
-      _bfd_error_handler (_("\
-ERROR: Endian Match failed . Attempting to link %B with binary %s \
-of opposite endian-ness"),
-			  ibfd, bfd_get_filename (obfd));
-      return FALSE;
+      bfd_boolean null_input_bfd = TRUE;
+      bfd_boolean only_data_sections = TRUE;
+
+      for (sec = ibfd->sections; sec != NULL; sec = sec->next)
+	{
+	  if ((bfd_get_section_flags (ibfd, sec)
+	       & (SEC_LOAD | SEC_CODE | SEC_HAS_CONTENTS))
+	      == (SEC_LOAD | SEC_CODE | SEC_HAS_CONTENTS))
+	    only_data_sections = FALSE;
+
+	  null_input_bfd = FALSE;
+	}
+
+      if (null_input_bfd || only_data_sections)
+	return TRUE;
     }
 
+
+  /* Complain about various flag/architecture mismatches.  */
+  mach_ibfd = elf_elfheader (ibfd)->e_machine;
   if (mach_obfd == EM_NONE)
     {
       mach_obfd = mach_ibfd;
@@ -526,28 +543,28 @@ of opposite endian-ness"),
     {
       if(mach_ibfd != mach_obfd)
 	{
-	  _bfd_error_handler (_("ERROR: Attempting to link %B \
-with a binary %s of different architecture"),
+	  _bfd_error_handler (_("ERROR: Attempting to link %B "
+				"with a binary %s of different architecture"),
 			      ibfd, bfd_get_filename (obfd));
 	  return FALSE;
 	}
-      else if (new_flags != old_flags)
+      else if (in_flags != out_flags)
 	{
 	  /* Warn if different flags. */
 	  (*_bfd_error_handler)
-	    (_("%s: uses different e_flags (0x%lx) fields than previous modules (0x%lx)"),
-	     bfd_get_filename (ibfd), (long)new_flags, (long)old_flags);
-	  if (new_flags && old_flags)
+	    (_("%s: uses different e_flags (0x%lx) fields than "
+	       "previous modules (0x%lx)"),
+	     bfd_get_filename (ibfd), (long)in_flags, (long)out_flags);
+	  if (in_flags && out_flags)
 	    return FALSE;
 	  /* MWDT doesnt set the eflags hence make sure we choose the
 	     eflags set by gcc.  */
-	  new_flags = new_flags > old_flags ? new_flags : old_flags;
+	  in_flags = in_flags > out_flags ? in_flags : out_flags;
 	}
-
     }
 
-  /* Update the flags. */
-  elf_elfheader (obfd)->e_flags = new_flags;
+  /* Update the flags.  */
+  elf_elfheader (obfd)->e_flags = in_flags;
 
   if (bfd_get_mach (obfd) < bfd_get_mach (ibfd))
     {
@@ -642,8 +659,9 @@ arc_elf_final_write_processing (bfd * abfd, bfd_boolean linker ATTRIBUTE_UNUSED)
     default:
       abort ();
     }
-  elf_elfheader (abfd)->e_flags &= ~EF_ARC_MACH;
-  elf_elfheader (abfd)->e_flags |= val;
+  if ((elf_elfheader (abfd)->e_flags & EF_ARC_MACH) == EF_ARC_CPU_GENERIC)
+    elf_elfheader (abfd)->e_flags |= val;
+
   elf_elfheader (abfd)->e_machine = emf;
 
   /* Record whatever is the current syscall ABI version.  */
@@ -1148,7 +1166,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	      case R_ARC_PC32:
 	      case R_ARC_32_PCREL:
 	        if (bfd_link_pic (info) 
-		      && (r_type != R_ARC_PC32
+		      && ((r_type != R_ARC_PC32 && r_type != R_ARC_32_ME)
 			  || (h != NULL
 			  && h->dynindx != -1
 			  && (!info->symbolic || !h->def_regular))
@@ -2601,8 +2619,8 @@ elf32_arc_gc_sweep_hook (bfd *                     abfd,
 #define bfd_elf32_bfd_merge_private_bfd_data    arc_elf_merge_private_bfd_data
 #define bfd_elf32_bfd_reloc_type_lookup         arc_elf32_bfd_reloc_type_lookup
 #define bfd_elf32_bfd_set_private_flags	        arc_elf_set_private_flags
-#define bfd_elf32_bfd_print_private_bfd_data  arc_elf_print_private_bfd_data
-#define bfd_elf32_bfd_copy_private_bfd_data arc_elf_copy_private_bfd_data
+#define bfd_elf32_bfd_print_private_bfd_data    arc_elf_print_private_bfd_data
+#define bfd_elf32_bfd_copy_private_bfd_data     arc_elf_copy_private_bfd_data
 
 #define elf_info_to_howto_rel		     arc_info_to_howto_rel
 #define elf_backend_object_p		     arc_elf_object_p
