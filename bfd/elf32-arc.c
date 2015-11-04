@@ -1119,25 +1119,6 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 
 	      reloc_data.got_offset_value = entry->offset;
 	      fprintf(stderr, "GOT_ENTRY = %d, offset = %d\n", entry->type, entry->offset);
-
-
-	//      if (is_reloc_for_GOT (howto) && !bfd_link_pic (info))
-	//	{
-
-
-	//	  /* TODO: Change it to use arc_do_relocation with ARC_32
-	//	   * reloc. Try to use ADD_RELA macro. */
-	//	  bfd_vma relocation =
-	//	    reloc_data.sym_value + reloc_data.reloc_addend
-	//	    + (reloc_data.sym_section->output_section != NULL ? 
-	//		(reloc_data.sym_section->output_offset
-	//	         + reloc_data.sym_section->output_section->vma)
-	//	      : 0);
-	//	  
-	//	  BFD_ASSERT(h->got.glist);
-	//	  bfd_vma got_offset = h->got.glist->offset;
-	//	  bfd_put_32 (output_bfd, relocation, ds.sgot->contents + got_offset);
-	//	}
 	    }
 
           if(ds.sgot != NULL)
@@ -1166,7 +1147,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	      case R_ARC_PC32:
 	      case R_ARC_32_PCREL:
 	        if (bfd_link_pic (info) 
-		      && ((r_type != R_ARC_PC32 && r_type != R_ARC_32_ME)
+		      && ((r_type != R_ARC_PC32 && r_type != R_ARC_32_PCREL)
 			  || (h != NULL
 			  && h->dynindx != -1
 			  && (!info->symbolic || !h->def_regular))
@@ -1326,6 +1307,29 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	      {
 		while(entry->type == GOT_NORMAL && entry->next != NULL)
 		  entry = entry->next;
+
+		if (! elf_hash_table (info)->dynamic_sections_created
+		    || (bfd_link_pic(info)
+		        && SYMBOL_REFERENCES_LOCAL (info, h)))
+		  {
+		    if(entry->type == GOT_TLS_GD && entry->processed == FALSE)
+		      {
+			reloc_data.sym_value = h->root.u.def.value;
+			reloc_data.sym_section = h->root.u.def.section;
+
+		        // Create dynamic relocation for local sym
+		        //ADD_RELA (output_bfd, got, entry->offset, 0, R_ARC_TLS_DTPMOD, 0);
+		        //ADD_RELA (output_bfd, got, entry->offset+4, 0, R_ARC_TLS_DTPOFF, 0);
+
+#if 0	      
+#error
+			asection *sym_section = h->root.u.def.section;
+	    	        bfd_vma sec_vma = sym_section->output_section->vma + sym_section->output_offset;
+	    	        bfd_put_32(output_bfd, h->root.u.def.value, ds.sgot + entry->offset + 4);
+#endif
+		        entry->processed = TRUE;
+		      }
+		  }
 	      }
 	      reloc_data.got_offset_value = entry->offset;
 	      fprintf(stderr, "GOT_ENTRY = %d, offset = %d\n", entry->type, entry->offset);
@@ -2338,8 +2342,8 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
 {
   bfd *           dynobj;
   asection *      s;
-  bfd_boolean	  relocs_exist;
-  bfd_boolean	  reltext_exist;
+  bfd_boolean	  relocs_exist = FALSE;
+  bfd_boolean	  reltext_exist = FALSE;
   struct dynamic_sections ds = arc_create_dynamic_sections (output_bfd, info);
 
   dynobj = (elf_hash_table (info))->dynobj;
