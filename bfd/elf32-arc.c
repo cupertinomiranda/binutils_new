@@ -118,18 +118,22 @@ const char * dyn_section_names[DYN_SECTION_TYPES_END] =
 
 enum tls_type_e { GOT_UNKNOWN = 0, GOT_NORMAL, GOT_TLS_GD, GOT_TLS_IE, GOT_TLS_LE };
 
+enum tls_got_entries { NONE = 0, MOD, OFF, MOD_AND_OFF };
+
 struct got_entry
 {
   struct got_entry *next;
   enum tls_type_e type;
   bfd_vma offset;
   bfd_boolean processed;
+  enum tls_got_entries existing_entries;
 };
 
 static void
 new_got_entry_to_list(struct got_entry **list, 
 		      enum tls_type_e type, 
-		      bfd_vma offset) 
+		      bfd_vma offset,
+		      enum tls_got_entries existing_entries) 
 {
   struct got_entry *entry = (struct got_entry *) malloc(sizeof(struct got_entry));
 
@@ -137,6 +141,7 @@ new_got_entry_to_list(struct got_entry **list,
   entry->offset = offset;
   entry->next = NULL;
   entry->processed = FALSE;
+  entry->existing_entries = existing_entries;
 
   /* Add new entry to the list */
   struct got_entry **p = list;
@@ -1312,21 +1317,27 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		    || (bfd_link_pic(info)
 		        && SYMBOL_REFERENCES_LOCAL (info, h)))
 		  {
-		    if(entry->type == GOT_TLS_GD && entry->processed == FALSE)
+		    if(entry->processed == FALSE 
+		       && (entry->type == GOT_TLS_GD || entry->type == GOT_TLS_IE))
 		      {
-			reloc_data.sym_value = h->root.u.def.value;
+			reloc_data.sym_value = h->root.u.def.value;// + (entry->type != GOT_TLS_IE ? 4 : 0);
 			reloc_data.sym_section = h->root.u.def.section;
 
 		        // Create dynamic relocation for local sym
 		        //ADD_RELA (output_bfd, got, entry->offset, 0, R_ARC_TLS_DTPMOD, 0);
 		        //ADD_RELA (output_bfd, got, entry->offset+4, 0, R_ARC_TLS_DTPOFF, 0);
 
-#if 0	      
-#error
-			asection *sym_section = h->root.u.def.section;
-	    	        bfd_vma sec_vma = sym_section->output_section->vma + sym_section->output_offset;
-	    	        bfd_put_32(output_bfd, h->root.u.def.value, ds.sgot + entry->offset + 4);
-#endif
+				bfd_vma sym_value = h->root.u.def.value
+					    + h->root.u.def.section->output_section->vma
+					    + h->root.u.def.section->output_offset
+					    + (entry->type == GOT_TLS_IE ? TLS_TBSS : 0);
+
+	    	        bfd_vma sec_vma = elf_hash_table (info)->tls_sec->output_section->vma;
+
+	    	        bfd_put_32(output_bfd, 
+				   sym_value - sec_vma, 
+				   ds.sgot->contents + entry->offset + (entry->existing_entries == MOD_AND_OFF ? 4 : 0));
+
 		        entry->processed = TRUE;
 		      }
 		  }
@@ -1393,10 +1404,14 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
     
           elf_hash_table (info)->dynobj = dynobj = abfd;
     
-          if (!_bfd_elf_create_got_section (dynobj, info))
-    	BFD_ASSERT(0);
-          if(!_bfd_elf_create_dynamic_sections (dynobj, info))
-    	BFD_ASSERT(0);
+
+              if (!_bfd_elf_create_got_section (dynobj, info))
+        	BFD_ASSERT(0);
+	  if(htab->dynamic_sections_created)
+	    {
+              if(!_bfd_elf_create_dynamic_sections (dynobj, info))
+        	BFD_ASSERT(0);
+	    }
     
     //      if (bed->elf_backend_create_dynamic_sections == NULL
     //	|| ! (*bed->elf_backend_create_dynamic_sections) (dynobj, info))
@@ -1583,7 +1598,7 @@ elf_arc_check_relocs (bfd *                      abfd,
 	    {
 	      /* Local symbol.  */
 	      bfd_vma offset = ADD_SYMBOL_REF_SEC_AND_RELOC (got, bfd_link_pic (info), NULL);
-	      new_got_entry_to_list(&(local_got_ents[r_symndx]), GOT_NORMAL, offset);
+	      new_got_entry_to_list(&(local_got_ents[r_symndx]), GOT_NORMAL, offset, NONE);
 	    }
 	  else
 	    {
@@ -1592,7 +1607,7 @@ elf_arc_check_relocs (bfd *                      abfd,
 	      //h->got.offset =
 	      bfd_vma offset = 
 		ADD_SYMBOL_REF_SEC_AND_RELOC (got, TRUE, h);
-	      new_got_entry_to_list(&h->got.glist, GOT_NORMAL, offset);
+	      new_got_entry_to_list(&h->got.glist, GOT_NORMAL, offset, NONE);
 	    }
 	}
 
@@ -1620,14 +1635,24 @@ elf_arc_check_relocs (bfd *                      abfd,
 
 	  if(type != GOT_UNKNOWN && !symbol_has_entry_of_type(*list, type)) 
 	    {
+	      enum tls_got_entries entries = NONE;
 	      bfd_vma offset = 
 		ADD_SYMBOL_REF_SEC_AND_RELOC (got, TRUE, h);
-	      new_got_entry_to_list(list, type, offset);
 
-	      //if(type == GOT_TLS_GD && !SYMBOL_REFERENCES_LOCAL(info, h))
+	//      if(type == GOT_TLS_GD && SYMBOL_REFERENCES_LOCAL(info, h))
+	//	{
+	//	  entries = MOD;
+	//	}
+	      if(type == GOT_TLS_GD)
 		{
 		  ADD_SYMBOL_REF_SEC_AND_RELOC (got, TRUE, h);
+		  entries = MOD_AND_OFF;
 		}
+
+	      if(entries == NONE)
+		entries = OFF;
+		//entries = type == GOT_TLS_GD ? MOD : OFF;
+	      new_got_entry_to_list(list, type, offset, entries);
 	    }
 	  
 	}
@@ -2019,24 +2044,30 @@ elf_arc_finish_dynamic_symbol (bfd * output_bfd,
 	          	  R_ARC_GLOB_DAT, 0);
       	        }
 	    }
-	  else if (list->type == GOT_TLS_GD)
+	  else if (list->existing_entries != NONE)
 	    {
 	      //if (SYMBOL_REFERENCES_LOCAL (info, h))
 	      //  {
 	      //    ADD_RELA (output_bfd, got, got_offset, 0, R_ARC_TLS_DTPMOD, 0);
 	      //  }
 	      //else
-		{
-		  ADD_RELA (output_bfd, got, got_offset, h->dynindx, R_ARC_TLS_DTPMOD, 0);
-	      	  ADD_RELA (output_bfd, got, got_offset+4, h->dynindx, R_ARC_TLS_DTPOFF, 0);
-		}
-	    }
-	  else if (list->type == GOT_TLS_IE)
-	    {
+	      enum tls_got_entries e = list->existing_entries;
+
+	      BFD_ASSERT(list->type != GOT_TLS_GD || list->existing_entries == MOD_AND_OFF);
+
 	      bfd_vma index = h->dynindx == -1 ? 0 : h->dynindx;
-	      // TODO: The addend is not always 0
-      	      ADD_RELA (output_bfd, got, got_offset, index, R_ARC_TLS_TPOFF, 0);
+	      if(e == MOD_AND_OFF || e == MOD)
+		  ADD_RELA (output_bfd, got, got_offset, index, R_ARC_TLS_DTPMOD, 0);
+	      if(e == MOD_AND_OFF || e == OFF)
+	      	  ADD_RELA (output_bfd, got, got_offset + (e == MOD_AND_OFF ? 4 : 0), 
+			    index, 
+			    (list->type == GOT_TLS_IE ? R_ARC_TLS_TPOFF : R_ARC_TLS_DTPOFF), 
+			    0);
 	    }
+	  //else if (list->type == GOT_TLS_IE)
+	  //  {
+      	  //    ADD_RELA (output_bfd, got, got_offset, index, R_ARC_TLS_TPOFF, 0);
+	  //  }
 
 	  list = list->next;
       	}
@@ -2232,7 +2263,7 @@ elf_arc_finish_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
 	  bfd_put_32 (output_bfd, (bfd_vma) 0, ds.sgotplt->contents + 4);
 	  bfd_put_32 (output_bfd, (bfd_vma) 0, ds.sgotplt->contents + 8);
 
-	  elf_section_data (ds.sgot->output_section)->this_hdr.sh_entsize = 4;
+	  //elf_section_data (ds.sgot->output_section)->this_hdr.sh_entsize = 4;
 	}
     }
 
@@ -2265,77 +2296,6 @@ arc_copy_got_alloc (struct elf_link_hash_entry * h,
   return TRUE;
 }
 
-static void
-arc_allocate_got (struct bfd_link_info *info)
-{
-  bfd *dynobj;
-  asection *sgot;
-  asection *srelgot;
-
-  dynobj = elf_hash_table (info)->dynobj;
-  sgot = bfd_get_section_by_name (dynobj, ".got");
-  BFD_ASSERT (sgot != NULL);
-  srelgot = bfd_get_section_by_name (dynobj, ".rela.got");
-  BFD_ASSERT (srelgot != NULL);
-
-
-  //for (; ah != (struct elf_ARC_link_hash_entry *) -1; ah = ah->next_deferred)
-  //  {
-  //    if (info->executable
-  //        && (ah->tls_type == GOT_TLS_IE || ah->tls_type == GOT_TLS_GD)
-  //        && SYMBOL_REFERENCES_LOCAL (info, &ah->root))
-  //      ah->tls_type = GOT_TLS_LE;
-  //    switch (ah->tls_type)
-  //      {
-  //      case GOT_NORMAL:
-  //        /* A GOTPC32 reference can have the purpose of loading the pointer
-  //           to a function, in which case, a shared library must load the
-  //           address from the GOT, which should be the plt entry from the main
-  //           program if the (non-pic) main program loads this pointer too.
-  //           Thus, we can't use SYMBOL_CALLS_LOCAL here.  */
-  //        if (!ah->force_got && SYMBOL_REFERENCES_LOCAL (info, &ah->root))
-  //          break;
-  //        /* Fall through.  */
-  //      case GOT_TLS_IE:
-  //        srelgot->size += sizeof (Elf32_External_Rela);
-  //        BFD_ASSERT (ah->root.got.offset == (bfd_vma) -1);
-  //        ah->root.got.offset = sgot->size;
-  //        sgot->size += 4;
-  //        break;
-  //      case GOT_TLS_GD:
-  //        /* We need a DTPMOD reloc for the first got slot, and unless this
-  //           symbol is local, a DTPOFFF reloc for the second got slot.
-  //           Fixme: could do with a single reloc if that was more intelligent.
-  //         */
-  //        srelgot->size += (sizeof (Elf32_External_Rela)
-  //      		    << !SYMBOL_REFERENCES_LOCAL (info, &ah->root));
-  //        BFD_ASSERT (ah->root.got.offset == (bfd_vma) -1);
-  //        ah->root.got.offset = sgot->size;
-  //        sgot->size += 8;
-  //        break;
-  //      default:
-  //        break;
-  //      }
-  //    ah->got_alloc = NULL;
-  //  }
-  /* Symbol versioning might have set up copies of the symbols that we
-     just have given their GOT slot allocations.  Copy these allocations
-     to the symbol copies.  */
-//  elf_ARC_link_hash_traverse (elf_ARC_hash_table (info), arc_copy_got_alloc,
-//			      (void *) info);
-}
-
-
-#ifndef REMOVED
-static bfd_boolean
-bla (struct elf_link_hash_entry * h,
-		    void *info ATTRIBUTE_UNUSED)
-{
-  
-  return TRUE;
-}
-#endif
-
 /* Set the sizes of the dynamic sections.  */
 static bfd_boolean
 elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
@@ -2348,13 +2308,6 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
 
   dynobj = (elf_hash_table (info))->dynobj;
   BFD_ASSERT (dynobj != NULL);
-
-#ifndef REMOVED
-  arc_allocate_got (info);
-  elf_link_hash_traverse (elf_hash_table(info),							\
-			  bla,
-			  (void *) info);
-#endif
 
   if ((elf_hash_table (info))->dynamic_sections_created)
     {
