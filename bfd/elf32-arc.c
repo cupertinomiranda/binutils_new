@@ -88,8 +88,6 @@ struct dynamic_sections
   asection	 *sdyn;
   asection	 *splt;
   asection	 *srelplt;
-  asection	 *sbss;
-  asection	 *srelbss;
 };
 
 static struct dynamic_sections
@@ -1003,6 +1001,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
   struct got_entry **           local_got_ents;
   Elf_Internal_Rela *           rel;
   Elf_Internal_Rela *           relend;
+  struct elf_link_hash_table *htab = elf_hash_table (info);
 
   symtab_hdr = &((elf_tdata (input_bfd))->symtab_hdr);
   sym_hashes = elf_sym_hashes (input_bfd);
@@ -1089,9 +1088,6 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 
       if (r_symndx < symtab_hdr->sh_info) /* A local symbol.  */
 	{
-	  struct dynamic_sections ds =
-	    arc_create_dynamic_sections (output_bfd, info);
-
 	  local_got_ents = arc_get_local_got_ents (output_bfd);
 	  struct got_entry *entry = local_got_ents[r_symndx];
 
@@ -1116,7 +1112,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		      //ADD_RELA (output_bfd, got, entry->offset+4, 0, R_ARC_TLS_DTPOFF, 0);
 
 	    	      bfd_vma sec_vma = sec->output_section->vma + sec->output_offset;
-	    	      bfd_put_32(output_bfd, reloc_data.sym_value - sec_vma, ds.sgot + entry->offset + 4);
+	    	      bfd_put_32(output_bfd, reloc_data.sym_value - sec_vma, htab->sgot + entry->offset + 4);
 
 		      entry->processed = TRUE;
 		    }
@@ -1126,16 +1122,13 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	      fprintf(stderr, "GOT_ENTRY = %d, offset = %d\n", entry->type, entry->offset);
 	    }
 
-          if(ds.sgot != NULL)
-	    reloc_data.got_symbol_vma = ds.sgot->output_section->vma + ds.sgot->output_offset;
+          if(htab->sgot != NULL)
+	    reloc_data.got_symbol_vma = htab->sgot->output_section->vma + htab->sgot->output_offset;
 
 	  reloc_data.should_relocate = TRUE;
 	}
       else /* Global symbol.  */
 	{
-	  struct dynamic_sections ds =
-	    arc_create_dynamic_sections (output_bfd, info);
-
 	  /* Get the symbol's entry in the symtab.  */
 	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
 
@@ -1266,7 +1259,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		  
 		  BFD_ASSERT(h->got.glist);
 		  bfd_vma got_offset = h->got.glist->offset;
-		  bfd_put_32 (output_bfd, relocation, ds.sgot->contents + got_offset);
+		  bfd_put_32 (output_bfd, relocation, htab->sgot->contents + got_offset);
 		}
 	    }
 	  else if (h->root.type == bfd_link_hash_undefweak)
@@ -1277,7 +1270,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	      else
 		{
 		  reloc_data.sym_value = h->root.u.def.value;
-		  reloc_data.sym_section = ds.sgot;
+		  reloc_data.sym_section = htab->sgot;
 	      	  reloc_data.should_relocate = TRUE;
 	      	}
 	    }
@@ -1286,14 +1279,14 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	      if (is_reloc_for_GOT (howto))
 		{
 		  reloc_data.sym_value = h->root.u.def.value;
-		  reloc_data.sym_section = ds.sgot;
+		  reloc_data.sym_section = htab->sgot;
 
 		  reloc_data.should_relocate = TRUE;
 		}
 	      else if (is_reloc_for_PLT (howto))
 		{
 		  reloc_data.sym_value = h->plt.offset;
-		  reloc_data.sym_section = ds.splt;
+		  reloc_data.sym_section = htab->splt;
 
 		  reloc_data.should_relocate = TRUE;
 		}
@@ -1336,7 +1329,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 
 	    	        bfd_put_32(output_bfd, 
 				   sym_value - sec_vma, 
-				   ds.sgot->contents + entry->offset + (entry->existing_entries == MOD_AND_OFF ? 4 : 0));
+				   htab->sgot->contents + entry->offset + (entry->existing_entries == MOD_AND_OFF ? 4 : 0));
 
 		        entry->processed = TRUE;
 		      }
@@ -1345,8 +1338,8 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	      reloc_data.got_offset_value = entry->offset;
 	      fprintf(stderr, "GOT_ENTRY = %d, offset = %d\n", entry->type, entry->offset);
 	    }
-          if(ds.sgot != NULL)
-	    reloc_data.got_symbol_vma = ds.sgot->output_section->vma + ds.sgot->output_offset;
+          if(htab->sgot != NULL)
+	    reloc_data.got_symbol_vma = htab->sgot->output_section->vma + htab->sgot->output_offset;
 
 	}
 
@@ -1371,7 +1364,7 @@ static struct dynamic_sections
 arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
 {
   struct elf_link_hash_table *htab;
-  static bfd	 *dynobj = NULL;
+  bfd	 *dynobj;
   struct dynamic_sections ds = {
 	.initialized = FALSE,
 	.sgot = NULL,
@@ -1381,8 +1374,6 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
 	.sdyn = NULL,
 	.splt = NULL,
 	.srelplt = NULL,
-	.sbss = NULL,
-	.srelbss = NULL
   };
 
   htab = elf_hash_table (info);
@@ -1397,70 +1388,71 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
         }
     
       dynobj = (elf_hash_table (info))->dynobj;
-      if (dynobj == NULL)
-        {
-    //      const struct elf_backend_data *bed;
-    //      bed = get_elf_backend_data (abfd);
-    
-          elf_hash_table (info)->dynobj = dynobj = abfd;
-    
+//      if (dynobj == NULL)
+//        {
+//    //      const struct elf_backend_data *bed;
+//    //      bed = get_elf_backend_data (abfd);
+//    
+//          elf_hash_table (info)->dynobj = dynobj = abfd;
+//    
+//
+//              if (!_bfd_elf_create_got_section (dynobj, info))
+//        	BFD_ASSERT(0);
+//	  if(htab->dynamic_sections_created)
+//	    {
+//              if(!_bfd_elf_create_dynamic_sections (dynobj, info))
+//        	BFD_ASSERT(0);
+//	    }
+//    
+//    //      if (bed->elf_backend_create_dynamic_sections == NULL
+//    //	|| ! (*bed->elf_backend_create_dynamic_sections) (dynobj, info))
+//    //	BFD_ASSERT(0);
+//    
+//    //    {
+//    //  asection *reldata = bfd_make_section_with_flags (dynobj, ".rela.data",
+//    //					 SEC_ALLOC
+//    //					 | SEC_LOAD
+//    //					 | SEC_HAS_CONTENTS
+//    //					 | SEC_IN_MEMORY
+//    //					 | SEC_LINKER_CREATED
+//    //					 | SEC_READONLY);
+//    //      if (reldata != NULL)
+//    //	  bfd_set_section_alignment (dynobj, ds.srelgot, 2);
+//    //    }
+//          //elf_hash_table (info)->dynamic_sections_created = TRUE;
+//        }
 
-              if (!_bfd_elf_create_got_section (dynobj, info))
-        	BFD_ASSERT(0);
-	  if(htab->dynamic_sections_created)
-	    {
-              if(!_bfd_elf_create_dynamic_sections (dynobj, info))
-        	BFD_ASSERT(0);
-	    }
-    
-    //      if (bed->elf_backend_create_dynamic_sections == NULL
-    //	|| ! (*bed->elf_backend_create_dynamic_sections) (dynobj, info))
-    //	BFD_ASSERT(0);
-    
-    //    {
-    //  asection *reldata = bfd_make_section_with_flags (dynobj, ".rela.data",
-    //					 SEC_ALLOC
-    //					 | SEC_LOAD
-    //					 | SEC_HAS_CONTENTS
-    //					 | SEC_IN_MEMORY
-    //					 | SEC_LINKER_CREATED
-    //					 | SEC_READONLY);
-    //      if (reldata != NULL)
-    //	  bfd_set_section_alignment (dynobj, ds.srelgot, 2);
-    //    }
-          //elf_hash_table (info)->dynamic_sections_created = TRUE;
-        }
+  if(dynobj)
+  {
 
-  ds.sgot = bfd_get_section_by_name (dynobj, ".got");
-  ds.srelgot = bfd_get_section_by_name (dynobj, ".rela.got");
-  if (ds.srelgot == NULL)
-    {
-      ds.srelgot = bfd_make_section_with_flags (dynobj, ".rela.got",
-					 SEC_ALLOC
-					 | SEC_LOAD
-					 | SEC_HAS_CONTENTS
-					 | SEC_IN_MEMORY
-					 | SEC_LINKER_CREATED
-					 | SEC_READONLY);
-      if (ds.srelgot == NULL
-	  || !bfd_set_section_alignment (dynobj, ds.srelgot, 2))
-	return ds;
-    }
+    ds.sgot = htab->sgot; //bfd_get_section_by_name (dynobj, ".got");
+    ds.srelgot = htab->srelgot; //bfd_get_section_by_name (dynobj, ".rela.got");
+  //if (ds.srelgot == NULL)
+  //  {
+  //    ds.srelgot = bfd_make_section_with_flags (dynobj, ".rela.got",
+  //      				 SEC_ALLOC
+  //      				 | SEC_LOAD
+  //      				 | SEC_HAS_CONTENTS
+  //      				 | SEC_IN_MEMORY
+  //      				 | SEC_LINKER_CREATED
+  //      				 | SEC_READONLY);
+  //    if (ds.srelgot == NULL
+  //        || !bfd_set_section_alignment (dynobj, ds.srelgot, 2))
+  //      return ds;
+  //  }
 
   ds.sgotplt = bfd_get_section_by_name (dynobj, ".got.plt");
   ds.srelgotplt = ds.srelplt;
 
+  ds.splt = bfd_get_section_by_name (dynobj, ".plt");
+  ds.srelplt = bfd_get_section_by_name (dynobj, ".rela.plt");
+
+  }
 
   if (htab->dynamic_sections_created) 
     {
       ds.sdyn = bfd_get_section_by_name (dynobj, ".dynamic");
     }
-  
-  ds.splt = bfd_get_section_by_name (dynobj, ".plt");
-  ds.srelplt = bfd_get_section_by_name (dynobj, ".rela.plt");
-
-  ds.sbss = bfd_get_section_by_name (dynobj, ".bss");
-  ds.srelbss = bfd_get_section_by_name (dynobj, ".rela.bss");
 
   ds.initialized = TRUE;
 
@@ -1468,14 +1460,14 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
 }
 
 #define ADD_SYMBOL_REF_SEC_AND_RELOC(SECNAME, COND_FOR_RELOC, H) \
-  ds.s##SECNAME->size; \
+  htab->s##SECNAME->size; \
   { \
-    if (COND_FOR_RELOC) ds.srel##SECNAME->size += sizeof (Elf32_External_Rela); \
+    if (COND_FOR_RELOC) htab->srel##SECNAME->size += sizeof (Elf32_External_Rela); \
     if (H)  \
       if (h->dynindx == -1 && !h->forced_local) \
 	if (! bfd_elf_link_record_dynamic_symbol (info, H)) \
 	  return FALSE; \
-    ds.s##SECNAME->size += 4; \
+    htab->s##SECNAME->size += 4; \
   }
 
 static bfd_boolean
@@ -1489,8 +1481,9 @@ elf_arc_check_relocs (bfd *                      abfd,
   struct got_entry **		local_got_ents;
   const Elf_Internal_Rela *	rel;
   const Elf_Internal_Rela *	rel_end;
-  bfd *				dynobj ATTRIBUTE_UNUSED;
+  bfd *				dynobj;
   asection *			sreloc = NULL;
+  struct elf_link_hash_table *  htab = elf_hash_table (info);
 
   if(bfd_link_relocatable(info))
     return TRUE;
@@ -1518,6 +1511,14 @@ elf_arc_check_relocs (bfd *                      abfd,
 	  return FALSE;
 	}
       howto = &elf_arc_howto_table[r_type];
+
+      if (dynobj == NULL &&
+	   (is_reloc_for_GOT (howto) == TRUE || is_reloc_for_TLS (howto) == TRUE))
+	{
+	  dynobj = elf_hash_table (info)->dynobj = abfd;
+	  if (! _bfd_elf_create_got_section (abfd, info))
+	    return FALSE;
+	}
 
       /* Load symbol information.  */
       r_symndx = ELF32_R_SYM (rel->r_info);
@@ -1752,6 +1753,7 @@ plt_do_relocs_for_symbol (bfd *abfd,
 	      ((relocation & 0xffff0000) >> 16) |
 	      ((relocation & 0xffff) << 16);
 	}
+
 
       switch (reloc->size)
 	{
@@ -2079,7 +2081,19 @@ elf_arc_finish_dynamic_symbol (bfd * output_bfd,
       bfd_vma rel_offset = (h->root.u.def.value
 		            + h->root.u.def.section->output_section->vma
 			    + h->root.u.def.section->output_offset);
-      ADD_RELA_NEW (output_bfd, bss, rel_offset, h->dynindx, R_ARC_COPY, 0);
+      //ADD_RELA_NEW (output_bfd, bss, rel_offset, h->dynindx, R_ARC_COPY, 0);
+//#define ADD_RELA_NEW(BFD, SECTION, OFFSET, SYM_IDX, TYPE, ADDEND) 
+      {
+      asection *srelbss = bfd_get_section_by_name (output_bfd, ".relbss");
+
+      bfd_vma loc = (bfd_vma) srelbss->contents + (srelbss->reloc_count * sizeof (Elf32_External_Rela));
+      srelbss->reloc_count++;
+      Elf_Internal_Rela rel;
+      rel.r_addend = 0;
+      rel.r_offset = rel_offset;
+      rel.r_info = ELF32_R_INFO (h->dynindx, R_ARC_COPY);
+      bfd_elf32_swap_reloca_out (output_bfd, &rel, (bfd_byte *) loc);
+    }
     }
 
   //if (h->needs_copy)
@@ -2400,9 +2414,11 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
       if (strcmp (s->name, ".dynamic") == NULL)
         continue;
 
-      s->contents = (bfd_byte *) bfd_zalloc (dynobj, s->size);
+      if(s->size != 0)
+	s->contents = (bfd_byte *) bfd_zalloc (dynobj, s->size);
+
       if (s->contents == NULL && s->size != 0)
-	  return FALSE;
+	return FALSE;
     }
 
   if (ds.sdyn)
