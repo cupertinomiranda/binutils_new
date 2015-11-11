@@ -966,7 +966,7 @@ static void
 declare_register_set (void)
 {
   int i;
-  for (i = 0; i < 32; ++i)
+  for (i = 0; i < 64; ++i)
     {
       char name[7];
 
