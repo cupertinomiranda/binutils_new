@@ -2084,7 +2084,7 @@ elf_arc_finish_dynamic_symbol (bfd * output_bfd,
       //ADD_RELA_NEW (output_bfd, bss, rel_offset, h->dynindx, R_ARC_COPY, 0);
 //#define ADD_RELA_NEW(BFD, SECTION, OFFSET, SYM_IDX, TYPE, ADDEND) 
       {
-      asection *srelbss = bfd_get_section_by_name (output_bfd, ".rela.bss");
+      asection *srelbss = bfd_get_section_by_name (h->root.u.def.section->owner, ".rela.bss");
 
       bfd_vma loc = (bfd_vma) srelbss->contents + (srelbss->reloc_count * sizeof (Elf32_External_Rela));
       srelbss->reloc_count++;
