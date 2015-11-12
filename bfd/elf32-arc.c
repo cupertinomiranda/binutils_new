@@ -38,22 +38,24 @@
 
 #define ADD_RELA(BFD, SECTION, OFFSET, SYM_IDX, TYPE, ADDEND) \
 {\
-  struct dynamic_sections _ds = arc_create_dynamic_sections (output_bfd, info); \
-  bfd_vma loc = (bfd_vma) _ds.srel##SECTION->contents + ((_ds.srel##SECTION->reloc_count++) * sizeof (Elf32_External_Rela)); \
+  struct elf_link_hash_table *htab = elf_hash_table (info); \
+  /* struct dynamic_sections _ds = arc_create_dynamic_sections (output_bfd, info); */ \
+  bfd_vma loc = (bfd_vma) htab->srel##SECTION->contents + ((htab->srel##SECTION->reloc_count++) * sizeof (Elf32_External_Rela)); \
   Elf_Internal_Rela rel; \
   /* Do Relocation */ \
-  /* bfd_put_32 (output_bfd, (bfd_vma) 0, _ds.s##SECTION->contents + OFFSET); */\
+  /* bfd_put_32 (output_bfd, (bfd_vma) 0, htab->s##SECTION->contents + OFFSET); */\
   rel.r_addend = ADDEND; \
-  rel.r_offset = (_ds.s##SECTION)->output_section->vma + (_ds.s##SECTION)->output_offset + OFFSET; \
+  rel.r_offset = (htab->s##SECTION)->output_section->vma + (htab->s##SECTION)->output_offset + OFFSET; \
   rel.r_info = ELF32_R_INFO (SYM_IDX, TYPE); \
   bfd_elf32_swap_reloca_out (BFD, &rel, (bfd_byte *) loc); \
 }
 
 #define ADD_RELA_NEW(BFD, SECTION, OFFSET, SYM_IDX, TYPE, ADDEND) \
 {\
-  struct dynamic_sections _ds = arc_create_dynamic_sections (output_bfd, info); \
-  bfd_vma loc = (bfd_vma) _ds.srel##SECTION->contents + (_ds.srel##SECTION->reloc_count * sizeof (Elf32_External_Rela)); \
-  _ds.srel##SECTION->reloc_count++; \
+  struct elf_link_hash_table *htab = elf_hash_table (info); \
+  /* struct dynamic_sections _ds = arc_create_dynamic_sections (output_bfd, info); */ \
+  bfd_vma loc = (bfd_vma) htab->srel##SECTION->contents + (htab->srel##SECTION->reloc_count * sizeof (Elf32_External_Rela)); \
+  htab->srel##SECTION->reloc_count++; \
   Elf_Internal_Rela rel; \
   rel.r_addend = ADDEND; \
   rel.r_offset = OFFSET; \
@@ -1103,7 +1105,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		while(entry->type == GOT_NORMAL && entry->next != NULL)
 		  entry = entry->next;
 		
-	      //if(bfd_link_pic(info)) 
+	      if(bfd_link_pic(info)) 
 		{
 		  if(entry->type == GOT_TLS_GD && entry->processed == FALSE)
 		    {
