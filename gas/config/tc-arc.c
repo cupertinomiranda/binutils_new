@@ -1934,7 +1934,7 @@ pseudo_operand_match (const expressionS *tok,
 	ret = 1;
       else if (!(operand_real->flags & ARC_OPERAND_IR))
 	{
-	  val = tok->X_add_number;
+	  val = tok->X_add_number + op->count;
 	  if (operand_real->flags & ARC_OPERAND_SIGNED)
 	    {
 	      max = (1 << (operand_real->bits - 1)) - 1;
