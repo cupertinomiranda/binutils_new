@@ -1107,11 +1107,10 @@ md_pcrel_from_section (fixS *fixP,
 	case BFD_RELOC_ARC_PC32:
 	  /* The hardware calculates relative to the start of the
 	     insn, but this relocation is relative to location of the
-	     LIMM, compensate.  TIP: the base always needs to be
+	     LIMM, compensate.  The base always needs to be
 	     substracted by 4 as we do not support this type of PCrel
 	     relocation for short instructions.  */
-	  base -= fixP->fx_where - fixP->fx_dot_value;
-	  gas_assert ((fixP->fx_where - fixP->fx_dot_value) == 4);
+	  base -= 4;
 	  /* Fall through.  */
 	case BFD_RELOC_ARC_PLT32:
 	case BFD_RELOC_ARC_S25H_PCREL_PLT:
