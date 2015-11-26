@@ -360,7 +360,7 @@ ARC_RELOC_HOWTO(ARC_GOTPC, 58, \
                 32, \
                 replace_word32, \
                 signed, \
-                ( ( GOT + A ) - P ))
+                ( GOT_BEGIN - P ))
 
 ARC_RELOC_HOWTO(ARC_S21W_PCREL_PLT, 60, \
                 2, \
