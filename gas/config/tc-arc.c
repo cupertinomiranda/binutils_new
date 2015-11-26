@@ -514,28 +514,47 @@ arc_option (int ignore ATTRIBUTE_UNUSED)
 
   c = get_symbol_name (&cpu);
   mach = arc_get_mach (cpu);
-  restore_line_pointer (c);
 
   if (mach == -1)
     goto bad_cpu;
 
   if (!mach_type_specified_p)
     {
-      arc_mach_type = mach;
+      if ((!strcmp ("ARC600", cpu))
+	  || (!strcmp ("ARC601", cpu))
+	  || (!strcmp ("A6", cpu)))
+	{
+	  md_parse_option (OPTION_MCPU, "arc600");
+	}
+      else if ((!strcmp ("ARC700", cpu))
+	       || (!strcmp ("A7", cpu)))
+	{
+	  md_parse_option (OPTION_MCPU, "arc700");
+	}
+      else if (!strcmp ("EM", cpu))
+	{
+	  md_parse_option (OPTION_MCPU, "arcem");
+	}
+      else if (!strcmp ("HS", cpu))
+	{
+	  md_parse_option (OPTION_MCPU, "archs");
+	}
+      else
+	as_fatal ("could not find the architecture");
+
       if (!bfd_set_arch_mach (stdoutput, bfd_arch_arc, mach))
 	as_fatal ("could not set architecture and machine");
-
-      mach_type_specified_p = 1;
     }
   else
     if (arc_mach_type != mach)
       as_warn ("Command-line value overrides \".cpu\" directive");
 
+  restore_line_pointer (c);
   demand_empty_rest_of_line ();
-
   return;
 
  bad_cpu:
+  restore_line_pointer (c);
   as_bad ("invalid identifier for \".cpu\"");
   ignore_rest_of_line ();
 }
