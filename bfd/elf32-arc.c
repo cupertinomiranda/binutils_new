@@ -29,7 +29,7 @@
 #include <stdint.h>
 #include "arc-plt.h"
 
-//#define printf(...)
+#define printf(...)
 #define fprintf(...)
 #define ARC_DEBUG(...)
 #define DEBUG(...) printf (__ARGV__)
@@ -1171,12 +1171,15 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	    	}
 
 	      reloc_data.got_offset_value = entry->offset;
-	      fprintf(stderr, "GOT_ENTRY = %d, offset = %d\n", entry->type, entry->offset);
+	      printf("GOT_ENTRY = %d, offset = 0x%x, vma = 0x%x for symbol %s\n", 
+		     entry->type, entry->offset, 
+		     htab->sgot->output_section->vma + htab->sgot->output_offset + entry->offset,
+		     "(local)");
 	    }
 
 	  BFD_ASSERT(htab->sgot != NULL || !is_reloc_for_GOT(howto));
           if(htab->sgot != NULL)
-	    reloc_data.got_symbol_vma = htab->sgot->output_section->vma;
+	    reloc_data.got_symbol_vma = htab->sgot->output_section->vma + htab->sgot->output_offset;
 
 	  reloc_data.should_relocate = TRUE;
 	}
@@ -1203,8 +1206,6 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 
 	      if (is_reloc_for_GOT (howto) && !bfd_link_pic (info))
 		{
-
-
 		  /* TODO: Change it to use arc_do_relocation with ARC_32
 		   * reloc. Try to use ADD_RELA macro. */
 		  bfd_vma relocation =
@@ -1217,6 +1218,12 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		  BFD_ASSERT(h->got.glist);
 		  bfd_vma got_offset = h->got.glist->offset;
 		  bfd_put_32 (output_bfd, relocation, htab->sgot->contents + got_offset);
+		}
+	      if (is_reloc_for_PLT(howto))
+		{
+		  //TODO: This is repeated up here.
+		  reloc_data.sym_value = h->plt.offset;
+		  reloc_data.sym_section = htab->splt;
 		}
 	    }
 	  else if (h->root.type == bfd_link_hash_undefweak)
@@ -1331,11 +1338,14 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		  }
 	      }
 	      reloc_data.got_offset_value = entry->offset;
-	      fprintf(stderr, "GOT_ENTRY = %d, offset = %d\n", entry->type, entry->offset);
+	      printf("GOT_ENTRY = %d, offset = 0x%x, vma = 0x%x for symbol %s\n", 
+		     entry->type, entry->offset, 
+		     htab->sgot->output_section->vma + htab->sgot->output_offset + entry->offset,
+		     h->root.root.string);
 	    }
 	  BFD_ASSERT(htab->sgot != NULL || !is_reloc_for_GOT(howto));
           if(htab->sgot != NULL)
-	    reloc_data.got_symbol_vma = htab->sgot->output_section->vma;
+	    reloc_data.got_symbol_vma = htab->sgot->output_section->vma + htab->sgot->output_offset;
 
 	}
 
