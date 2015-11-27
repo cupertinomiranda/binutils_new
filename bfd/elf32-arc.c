@@ -1154,24 +1154,29 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 
 		      entry->processed = TRUE;
 		    }
-		    if(entry->type == GOT_NORMAL && entry->processed == FALSE)
-		      {
-		        bfd_vma sec_vma = reloc_data.sym_section->output_section->vma
-		        		  + reloc_data.sym_section->output_offset;
-			
-	    	        bfd_put_32(output_bfd, reloc_data.sym_value + sec_vma, htab->sgot->contents + entry->offset);
+		  if(entry->type == GOT_TLS_IE && entry->processed == FALSE)
+		    {
+	    	      bfd_vma sec_vma = htab->tls_sec->output_section->vma;
+	    	      bfd_put_32(output_bfd, reloc_data.sym_value - sec_vma, htab->sgot->contents + entry->offset);
+		    }
+		  if(entry->type == GOT_NORMAL && entry->processed == FALSE)
+		    {
+		      bfd_vma sec_vma = reloc_data.sym_section->output_section->vma
+		      		  + reloc_data.sym_section->output_offset;
+		      
+	    	      bfd_put_32(output_bfd, reloc_data.sym_value + sec_vma, htab->sgot->contents + entry->offset);
 
-			printf("PATCHED: 0x%08x @ 0x%08x for sym %s in got offset 0x%x\n", 
-			       reloc_data.sym_value + sec_vma,
-			       htab->sgot->output_section->vma + htab->sgot->output_offset + entry->offset,
-			       "(local)",
-			       entry->offset);
-		        entry->processed = TRUE;
-		      }
+		      printf("arc_info: PATCHED: 0x%08x @ 0x%08x for sym %s in got offset 0x%x\n", 
+		             reloc_data.sym_value + sec_vma,
+		             htab->sgot->output_section->vma + htab->sgot->output_offset + entry->offset,
+		             "(local)",
+		             entry->offset);
+		      entry->processed = TRUE;
+		    }
 	    	}
 
 	      reloc_data.got_offset_value = entry->offset;
-	      printf("GOT_ENTRY = %d, offset = 0x%x, vma = 0x%x for symbol %s\n", 
+	      printf("arc_info: GOT_ENTRY = %d, offset = 0x%x, vma = 0x%x for symbol %s\n", 
 		     entry->type, entry->offset, 
 		     htab->sgot->output_section->vma + htab->sgot->output_offset + entry->offset,
 		     "(local)");
@@ -1219,7 +1224,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		  bfd_vma got_offset = h->got.glist->offset;
 		  bfd_put_32 (output_bfd, relocation, htab->sgot->contents + got_offset);
 		}
-	      if (is_reloc_for_PLT(howto))
+	      if (is_reloc_for_PLT(howto) && bfd_link_pic (info))
 		{
 		  //TODO: This is repeated up here.
 		  reloc_data.sym_value = h->plt.offset;
@@ -1315,6 +1320,11 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 
 		        entry->processed = TRUE;
 		      }
+		    if(entry->type == GOT_TLS_IE && entry->processed == FALSE)
+		      {
+	    	        bfd_vma sec_vma = htab->tls_sec->output_section->vma;
+	    	        bfd_put_32(output_bfd, reloc_data.sym_value - sec_vma, htab->sgot->contents + entry->offset);
+		      }
 		    if(entry->type == GOT_NORMAL && entry->processed == FALSE)
 		      {
 		        bfd_vma sec_vma = reloc_data.sym_section->output_section->vma
@@ -1327,7 +1337,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 
 	    	        bfd_put_32(output_bfd, reloc_data.sym_value + sec_vma, htab->sgot->contents + entry->offset);
 
-			printf("PATCHED: 0x%08x @ 0x%08x for sym %s in got offset 0x%x\n", 
+			printf("arc_info: PATCHED: 0x%08x @ 0x%08x for sym %s in got offset 0x%x\n", 
 			       reloc_data.sym_value + sec_vma,
 			       htab->sgot->output_section->vma + htab->sgot->output_offset + entry->offset,
 			       h->root.root.string,
@@ -1338,7 +1348,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		  }
 	      }
 	      reloc_data.got_offset_value = entry->offset;
-	      printf("GOT_ENTRY = %d, offset = 0x%x, vma = 0x%x for symbol %s\n", 
+	      printf("arc_info: GOT_ENTRY = %d, offset = 0x%x, vma = 0x%x for symbol %s\n", 
 		     entry->type, entry->offset, 
 		     htab->sgot->output_section->vma + htab->sgot->output_offset + entry->offset,
 		     h->root.root.string);
@@ -1885,7 +1895,12 @@ relocate_plt_for_symbol (bfd *output_bfd,
   bfd_vma plt_index = (h->plt.offset  - plt_data->entry_size) / plt_data->elem_size;
   bfd_vma got_offset = (plt_index + 3) * 4;
 
-  printf("PLT_OFFSET = 0x%x\n", h->plt.offset);
+  printf("arc_info: PLT_OFFSET = 0x%x, PLT_ENTRY_VMA = 0x%x, GOT_ENTRY_OFFSET = 0x%x, GOT_ENTRY_VMA = 0x%x, for symbol %s\n", 
+	 h->plt.offset, 
+	 htab->splt->output_section->vma  + htab->splt->output_offset + h->plt.offset,
+	 got_offset, 
+	 htab->sgotplt->output_section->vma + htab->sgotplt->output_offset + got_offset,
+	 h->root.root.string);
 
   memcpy (htab->splt->contents + h->plt.offset, plt_data->elem, plt_data->elem_size);
   plt_do_relocs_for_symbol (output_bfd, htab, plt_data->elem_relocs, h->plt.offset,
@@ -2154,6 +2169,7 @@ elf_arc_finish_dynamic_symbol (bfd * output_bfd,
 	    }
 	  else if (list->existing_entries != NONE)
 	    {
+	      struct elf_link_hash_table *htab = elf_hash_table (info);
 	      //if (SYMBOL_REFERENCES_LOCAL (info, h))
 	      //  {
 	      //    ADD_RELA (output_bfd, got, got_offset, 0, R_ARC_TLS_DTPMOD, 0);
@@ -2165,12 +2181,31 @@ elf_arc_finish_dynamic_symbol (bfd * output_bfd,
 
 	      bfd_vma index = h->dynindx == -1 ? 0 : h->dynindx;
 	      if(e == MOD_AND_OFF || e == MOD)
+		{
 		  ADD_RELA (output_bfd, got, got_offset, index, R_ARC_TLS_DTPMOD, 0);
+		  printf("arc_info: TLS_DYNRELOC: type = %d, GOT_OFFSET = 0x%x, GOT_VMA = 0x%x, INDEX = %d, ADDEND = 0x%x\n",
+			 list->type,
+			 got_offset,
+			 htab->sgot->output_section->vma + htab->sgot->output_offset + got_offset,
+			 index, 0);
+		}
 	      if(e == MOD_AND_OFF || e == OFF)
+		{
+		  bfd_vma addend = 0;
+		  if(list->type == GOT_TLS_IE)
+		    addend = bfd_get_32(output_bfd, htab->sgot->contents + got_offset);
+
 	      	  ADD_RELA (output_bfd, got, got_offset + (e == MOD_AND_OFF ? 4 : 0), 
 			    index, 
 			    (list->type == GOT_TLS_IE ? R_ARC_TLS_TPOFF : R_ARC_TLS_DTPOFF), 
-			    0);
+			    addend);
+
+		  printf("arc_info: TLS_DYNRELOC: type = %d, GOT_OFFSET = 0x%x, GOT_VMA = 0x%x, INDEX = %d, ADDEND = 0x%x\n",
+			 list->type,
+			 got_offset,
+			 htab->sgot->output_section->vma + htab->sgot->output_offset + got_offset,
+			 index, addend);
+		}
 	    }
 	  //else if (list->type == GOT_TLS_IE)
 	  //  {
