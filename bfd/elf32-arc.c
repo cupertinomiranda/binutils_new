@@ -29,7 +29,11 @@
 #include <stdint.h>
 #include "arc-plt.h"
 
+//#define ARC_ENABLE_DEBUG 1
+#ifndef ARC_ENABLE_DEBUG
 #define printf(...)
+#endif
+
 #define fprintf(...)
 #define ARC_DEBUG(...)
 #define DEBUG(...) printf (__ARGV__)
@@ -813,11 +817,24 @@ get_middle_endian_relocation (bfd_vma reloc)
 
 #define none (0)
 
-#define PRINT_DEBUG_RELOC_INFO_BEFORE \
+#define PRINT_DEBUG_RELOC_INFO_BEFORE(FORMULA) \
+    {\
+      asection *sym_section = reloc_data.sym_section; \
+      asection *input_section = reloc_data.input_section; \
       printf ("FORMULA = " #FORMULA "\n"); \
       printf ("S = 0x%x\n", S); \
       printf ("A = 0x%x\n", A); \
       printf ("L = 0x%x\n", L); \
+      if(sym_section->output_section != NULL) \
+	printf ("symbol_section->vma = 0x%x\n", \
+	   sym_section->output_section->vma + sym_section->output_offset); \
+      else \
+	printf ("symbol_section->vma = NULL\n"); \
+      if(input_section->output_section != NULL) \
+	printf ("symbol_section->vma = 0x%x\n", \
+	   input_section->output_section->vma + input_section->output_offset); \
+      else \
+	printf ("symbol_section->vma = NULL\n"); \
       /* printf ("P1 = 0x%x\n", ((reloc_data.input_section->output_section->vma + reloc_data.input_section->output_offset) + reloc_data.reloc_offset)); */ \
       /* printf ("PCL = 0x%x\n", ((reloc_data.input_section->output_section->vma + reloc_data.input_section->output_offset) + reloc_data.reloc_offset) & ~0x3); */ \
       printf ("PCL = 0x%x\n", P); \
@@ -826,37 +843,25 @@ get_middle_endian_relocation (bfd_vma reloc)
       printf ("SDA_OFFSET = 0x%x\n", _SDA_BASE_); \
       printf ("SDA_SET = %d\n", reloc_data.sdata_begin_symbol_vma_set); \
       printf ("GOT_OFFSET = 0x%x\n", GOT); \
-      relocation = FORMULA ; \
+      /* relocation = FORMULA ; */ \
       printf ("relocation = 0x%08x\n", relocation); \
       printf ("before = 0x%08x\n", (unsigned int) insn); \
-      printf ("data   = 0x%08x (%u) (%d)\n", (unsigned int) relocation, (unsigned int) relocation, (int) relocation); 
+      printf ("data   = 0x%08x (%u) (%d)\n", (unsigned int) relocation, (unsigned int) relocation, (int) relocation); \
+    }
 
 #define PRINT_DEBUG_RELOC_INFO_AFTER \
--      printf ("after  = 0x%08x\n", (unsigned int) insn); 
+    { \
+      printf ("after  = 0x%08x\n", (unsigned int) insn); \
+    }
 
 #define ARC_RELOC_HOWTO(TYPE, VALUE, SIZE, BITSIZE, RELOC_FUNCTION, OVERFLOW, FORMULA) \
   case R_##TYPE: \
     { \
       bfd_vma bitsize ATTRIBUTE_UNUSED = BITSIZE; \
       relocation = FORMULA  ; \
-      printf ("FORMULA = " #FORMULA "\n"); \
-      printf ("S = 0x%x\n", S); \
-      printf ("A = 0x%x\n", A); \
-      printf ("L = 0x%x\n", L); \
-      printf ("P1 = 0x%x\n", ((reloc_data.input_section->output_section->vma + reloc_data.input_section->output_offset) + reloc_data.reloc_offset));  \
-      printf ("PCL = 0x%x\n", ((reloc_data.input_section->output_section->vma + reloc_data.input_section->output_offset) + reloc_data.reloc_offset) & ~0x3); \
-      printf ("PCL = 0x%x\n", P); \
-      printf ("P = 0x%x\n", P); \
-      printf ("G = 0x%x\n", G); \
-      printf ("SDA_OFFSET = 0x%x\n", _SDA_BASE_); \
-      printf ("SDA_SET = %d\n", reloc_data.sdata_begin_symbol_vma_set); \
-      printf ("GOT_OFFSET = 0x%x\n", GOT); \
-      relocation = FORMULA ; \
-      printf ("relocation = 0x%08x\n", relocation); \
-      printf ("before = 0x%08x\n", (unsigned int) insn); \
-      printf ("data   = 0x%08x (%u) (%d)\n", (unsigned int) relocation, (unsigned int) relocation, (int) relocation); \
+      PRINT_DEBUG_RELOC_INFO_BEFORE(FORMULA) \
       insn = RELOC_FUNCTION (insn, relocation); \
-      printf ("after  = 0x%08x\n", (unsigned int) insn); \
+      PRINT_DEBUG_RELOC_INFO_AFTER \
     } \
     break;
 
@@ -1224,7 +1229,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		  bfd_vma got_offset = h->got.glist->offset;
 		  bfd_put_32 (output_bfd, relocation, htab->sgot->contents + got_offset);
 		}
-	      if (is_reloc_for_PLT(howto) && bfd_link_pic (info))
+	      if (is_reloc_for_PLT(howto) && h->plt.offset != -1 && bfd_link_pic (info))
 		{
 		  //TODO: This is repeated up here.
 		  reloc_data.sym_value = h->plt.offset;
