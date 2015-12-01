@@ -1229,7 +1229,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		  bfd_vma got_offset = h->got.glist->offset;
 		  bfd_put_32 (output_bfd, relocation, htab->sgot->contents + got_offset);
 		}
-	      if (is_reloc_for_PLT(howto) && h->plt.offset != -1 && bfd_link_pic (info))
+	      if (is_reloc_for_PLT(howto) && h->plt.offset != -1)
 		{
 		  //TODO: This is repeated up here.
 		  reloc_data.sym_value = h->plt.offset;
