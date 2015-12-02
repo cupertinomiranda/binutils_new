@@ -1335,18 +1335,27 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		        bfd_vma sec_vma = reloc_data.sym_section->output_section->vma
 		        		  + reloc_data.sym_section->output_offset;
 			
-			
 			//bfd_vma rela_plt_vma = htab->srelplt->output_section->vma
 			//		       + htab->srelplt->output_offset;
 			//bfd_vma offset = sec_vma - rela_plt_vma;
 
-	    	        bfd_put_32(output_bfd, reloc_data.sym_value + sec_vma, htab->sgot->contents + entry->offset);
+		        if(h->root.type != bfd_link_hash_undefweak)
+			  {
+			    bfd_put_32(output_bfd, reloc_data.sym_value + sec_vma, htab->sgot->contents + entry->offset);
 
-			printf("arc_info: PATCHED: 0x%08x @ 0x%08x for sym %s in got offset 0x%x\n", 
-			       reloc_data.sym_value + sec_vma,
-			       htab->sgot->output_section->vma + htab->sgot->output_offset + entry->offset,
-			       h->root.root.string,
-			       entry->offset);
+			    printf("arc_info: PATCHED: 0x%08x @ 0x%08x for sym %s in got offset 0x%x\n", 
+			           reloc_data.sym_value + sec_vma,
+			           htab->sgot->output_section->vma + htab->sgot->output_offset + entry->offset,
+			           h->root.root.string,
+			           entry->offset);
+			  }
+			else
+			  {
+			    printf("arc_info: PATCHED: NOT_PATCHED @ 0x%08x for sym %s in got offset 0x%x (is undefweak)\n", 
+			           htab->sgot->output_section->vma + htab->sgot->output_offset + entry->offset,
+			           h->root.root.string,
+			           entry->offset);
+			  }
 
 		        entry->processed = TRUE;
 		      }
