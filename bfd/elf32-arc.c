@@ -1146,39 +1146,36 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		while(entry->type != GOT_NORMAL && entry->next != NULL)
 		  entry = entry->next;
 		
-	      if(bfd_link_pic(info)) 
-		{
-		  if(entry->type == GOT_TLS_GD && entry->processed == FALSE)
-		    {
-		      // Create dynamic relocation for local sym
-		      ADD_RELA (output_bfd, got, entry->offset, 0, R_ARC_TLS_DTPMOD, 0);
-		      //ADD_RELA (output_bfd, got, entry->offset+4, 0, R_ARC_TLS_DTPOFF, 0);
+	      if(entry->type == GOT_TLS_GD && entry->processed == FALSE)
+	        {
+	          // Create dynamic relocation for local sym
+	          ADD_RELA (output_bfd, got, entry->offset, 0, R_ARC_TLS_DTPMOD, 0);
+	          ADD_RELA (output_bfd, got, entry->offset+4, 0, R_ARC_TLS_DTPOFF, 0);
 
-	    	      bfd_vma sec_vma = sec->output_section->vma + sec->output_offset;
-	    	      bfd_put_32(output_bfd, reloc_data.sym_value - sec_vma, htab->sgot->contents + entry->offset + 4);
+	          bfd_vma sec_vma = sec->output_section->vma + sec->output_offset;
+	          bfd_put_32(output_bfd, reloc_data.sym_value - sec_vma, htab->sgot->contents + entry->offset + 4);
 
-		      entry->processed = TRUE;
-		    }
-		  if(entry->type == GOT_TLS_IE && entry->processed == FALSE)
-		    {
-	    	      bfd_vma sec_vma = htab->tls_sec->output_section->vma;
-	    	      bfd_put_32(output_bfd, reloc_data.sym_value - sec_vma, htab->sgot->contents + entry->offset);
-		    }
-		  if(entry->type == GOT_NORMAL && entry->processed == FALSE)
-		    {
-		      bfd_vma sec_vma = reloc_data.sym_section->output_section->vma
-		      		  + reloc_data.sym_section->output_offset;
-		      
-	    	      bfd_put_32(output_bfd, reloc_data.sym_value + sec_vma, htab->sgot->contents + entry->offset);
+	          entry->processed = TRUE;
+	        }
+	      if(entry->type == GOT_TLS_IE && entry->processed == FALSE)
+	        {
+	          bfd_vma sec_vma = htab->tls_sec->output_section->vma;
+	          bfd_put_32(output_bfd, reloc_data.sym_value - sec_vma, htab->sgot->contents + entry->offset);
+	        }
+	      if(entry->type == GOT_NORMAL && entry->processed == FALSE)
+	        {
+	          bfd_vma sec_vma = reloc_data.sym_section->output_section->vma
+	          		  + reloc_data.sym_section->output_offset;
+	          
+	          bfd_put_32(output_bfd, reloc_data.sym_value + sec_vma, htab->sgot->contents + entry->offset);
 
-		      printf("arc_info: PATCHED: 0x%08x @ 0x%08x for sym %s in got offset 0x%x\n", 
-		             reloc_data.sym_value + sec_vma,
-		             htab->sgot->output_section->vma + htab->sgot->output_offset + entry->offset,
-		             "(local)",
-		             entry->offset);
-		      entry->processed = TRUE;
-		    }
-	    	}
+	          printf("arc_info: PATCHED: 0x%08x @ 0x%08x for sym %s in got offset 0x%x\n", 
+	                 reloc_data.sym_value + sec_vma,
+	                 htab->sgot->output_section->vma + htab->sgot->output_offset + entry->offset,
+	                 "(local)",
+	                 entry->offset);
+	          entry->processed = TRUE;
+	        }
 
 	      reloc_data.got_offset_value = entry->offset;
 	      printf("arc_info: GOT_ENTRY = %d, offset = 0x%x, vma = 0x%x for symbol %s\n", 
