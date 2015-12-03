@@ -29,7 +29,7 @@
 #include <stdint.h>
 #include "arc-plt.h"
 
-#define ARC_ENABLE_DEBUG 1
+//#define ARC_ENABLE_DEBUG 1
 #ifndef ARC_ENABLE_DEBUG
 #define printf(...)
 #endif
@@ -1160,7 +1160,9 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	      if(entry->type == GOT_TLS_IE && entry->processed == FALSE)
 	        {
 	          bfd_vma sec_vma = htab->tls_sec->output_section->vma;
-	          bfd_put_32(output_bfd, reloc_data.sym_value - sec_vma, htab->sgot->contents + entry->offset);
+	          bfd_put_32(output_bfd, reloc_data.sym_value, htab->sgot->contents + entry->offset);
+		  /* TODO: This type of relocs is the cause for all the
+		   * ARC_NONE dynamic relocs.  */
 	        }
 	      if(entry->type == GOT_NORMAL && entry->processed == FALSE)
 	        {
@@ -1250,7 +1252,7 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		  reloc_data.should_relocate = TRUE;
 		}
 	      else
-		BFD_ASSERT(0);
+		continue;
 	    }
 	  else
 	    {
