@@ -29,7 +29,7 @@
 #include <stdint.h>
 #include "arc-plt.h"
 
-//#define ARC_ENABLE_DEBUG 1
+#define ARC_ENABLE_DEBUG 1
 #ifndef ARC_ENABLE_DEBUG
 #define printf(...)
 #endif
@@ -1236,14 +1236,21 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 	  else if (h->root.type == bfd_link_hash_undefweak)
 	    {
 	      /* Is weak symbol and has no definition.	*/
-	      if(!is_reloc_for_GOT(howto))
-		continue;
-	      else
+	      if(is_reloc_for_GOT(howto))
 		{
 		  reloc_data.sym_value = h->root.u.def.value;
 		  reloc_data.sym_section = htab->sgot;
 	      	  reloc_data.should_relocate = TRUE;
 	      	}
+	      else if (is_reloc_for_PLT(howto) && h->plt.offset != -1)
+		{
+		  //TODO: This is repeated up here.
+		  reloc_data.sym_value = h->plt.offset;
+		  reloc_data.sym_section = htab->splt;
+		  reloc_data.should_relocate = TRUE;
+		}
+	      else
+		BFD_ASSERT(0);
 	    }
 	  else
 	    {
