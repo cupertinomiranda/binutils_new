@@ -1148,21 +1148,42 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 		
 	      if(entry->type == GOT_TLS_GD && entry->processed == FALSE)
 	        {
+		  bfd_vma sym_vma = sym->st_value 
+				    + sec->output_section->vma
+				    + sec->output_offset;
+
 	          // Create dynamic relocation for local sym
-	          ADD_RELA (output_bfd, got, entry->offset, 0, R_ARC_TLS_DTPMOD, 0);
-	          ADD_RELA (output_bfd, got, entry->offset+4, 0, R_ARC_TLS_DTPOFF, 0);
+	          //ADD_RELA (output_bfd, got, entry->offset, 0, R_ARC_TLS_DTPMOD, 0);
+	          //ADD_RELA (output_bfd, got, entry->offset+4, 0, R_ARC_TLS_DTPOFF, 0);
 
 	          bfd_vma sec_vma = sec->output_section->vma + sec->output_offset;
-	          bfd_put_32(output_bfd, reloc_data.sym_value - sec_vma, htab->sgot->contents + entry->offset + 4);
+	          bfd_put_32(output_bfd, sym_vma - sec_vma, htab->sgot->contents + entry->offset + 4);
+
+		  printf("arc_info: FIXED -> GOT_TLS_GD value = 0x%x @ 0x%x, for symbol %s\n",
+			 sym_vma - sec_vma,
+			 htab->sgot->contents + entry->offset + 4,
+			 "(local)");
 
 	          entry->processed = TRUE;
 	        }
 	      if(entry->type == GOT_TLS_IE && entry->processed == FALSE)
 	        {
+		  bfd_vma sym_vma = sym->st_value 
+				    + sec->output_section->vma
+				    + sec->output_offset;
 	          bfd_vma sec_vma = htab->tls_sec->output_section->vma;
-	          bfd_put_32(output_bfd, reloc_data.sym_value, htab->sgot->contents + entry->offset);
+	          bfd_put_32(output_bfd, sym_vma - sec_vma, htab->sgot->contents + entry->offset);
 		  /* TODO: This type of relocs is the cause for all the
 		   * ARC_NONE dynamic relocs.  */
+
+		  printf("arc_info: FIXED -> GOT_TLS_IE value = 0x%x @ 0x%x, for symbol %s\n",
+			 sym_vma - sec_vma,
+			 htab->sgot->contents + entry->offset,
+			 "(local)");
+
+	          //ADD_RELA (output_bfd, got, entry->offset, 0, R_ARC_TLS_TPOFF, 0);
+
+		  entry->processed = TRUE;
 	        }
 	      if(entry->type == GOT_NORMAL && entry->processed == FALSE)
 	        {
@@ -1320,14 +1341,21 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 
 			bfd_vma sym_value = h->root.u.def.value
 					    + h->root.u.def.section->output_section->vma
-				    	    + h->root.u.def.section->output_offset
-				    	    + (entry->type == GOT_TLS_IE ? TLS_TBSS : 0);
+				    	    + h->root.u.def.section->output_offset;
+				    	    //+ (entry->type == GOT_TLS_IE ? TLS_TBSS : 0);
 
 	    	        bfd_vma sec_vma = elf_hash_table (info)->tls_sec->output_section->vma;
 
 	    	        bfd_put_32(output_bfd, 
 				   sym_value - sec_vma, 
 				   htab->sgot->contents + entry->offset + (entry->existing_entries == MOD_AND_OFF ? 4 : 0));
+
+
+		        printf("arc_info: FIXED -> %s value = 0x%x @ 0x%x, for symbol %s\n",
+			        (entry->type == GOT_TLS_GD ? "GOT_TLS_GD" : "GOT_TLS_IE"),
+				sym_value - sec_vma,
+		      		htab->sgot->contents + entry->offset + (entry->existing_entries == MOD_AND_OFF ? 4 : 0),
+		      		h->root.root.string);
 
 		        entry->processed = TRUE;
 		      }
