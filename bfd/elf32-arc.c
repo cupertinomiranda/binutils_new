@@ -32,6 +32,16 @@
 //#define ARC_ENABLE_DEBUG 1
 #ifndef ARC_ENABLE_DEBUG
 #define printf(...)
+#else
+static char *
+name_for_global_symbol(struct elf_link_hash_entry *h) 
+{
+  static char *local_str = "(local)";
+  if(h == NULL)
+    return local_str;
+  else
+    return h->root.root.string;  
+}
 #endif
 
 #define fprintf(...)
@@ -1623,7 +1633,11 @@ arc_create_dynamic_sections (bfd * abfd, struct bfd_link_info *info)
 #define ADD_SYMBOL_REF_SEC_AND_RELOC(SECNAME, COND_FOR_RELOC, H) \
   htab->s##SECNAME->size; \
   { \
-    if (COND_FOR_RELOC) htab->srel##SECNAME->size += sizeof (Elf32_External_Rela); \
+    if (COND_FOR_RELOC) { \
+	htab->srel##SECNAME->size += sizeof (Elf32_External_Rela); \
+	printf("arc_info: Added reloc space in " #SECNAME " section at " __FILE__ ":%d for symbol\n", \
+	       __LINE__, name_for_global_symbol(H)); \
+    } \
     if (H)  \
       if (h->dynindx == -1 && !h->forced_local) \
 	if (! bfd_elf_link_record_dynamic_symbol (info, H)) \
@@ -1771,7 +1785,7 @@ elf_arc_check_relocs (bfd *                      abfd,
 	      if(h->got.glist == NULL)
 		{
 		  bfd_vma offset = 
-	      	    ADD_SYMBOL_REF_SEC_AND_RELOC (got, TRUE, h);
+	      	    ADD_SYMBOL_REF_SEC_AND_RELOC (got, bfd_link_pic (info), h);
 	      	  new_got_entry_to_list(&h->got.glist, GOT_NORMAL, offset, NONE);
 		}  
 	    }
@@ -2160,7 +2174,7 @@ elf_arc_adjust_dynamic_symbol (struct bfd_link_info *info,
   h->root.u.def.value = s->size;
 
   /* Increment the section size to make room for the symbol.  */
-  //s->size += h->size;
+  s->size += h->size;
 
   return TRUE;
 }
@@ -2277,10 +2291,12 @@ elf_arc_finish_dynamic_symbol (bfd * output_bfd,
 
       bfd_vma loc = (bfd_vma) srelbss->contents + (srelbss->reloc_count * sizeof (Elf32_External_Rela));
       srelbss->reloc_count++;
+
       Elf_Internal_Rela rel;
       rel.r_addend = 0;
       rel.r_offset = rel_offset;
       rel.r_info = ELF32_R_INFO (h->dynindx, R_ARC_COPY);
+
       bfd_elf32_swap_reloca_out (output_bfd, &rel, (bfd_byte *) loc);
     }
     }
