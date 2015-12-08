@@ -1163,8 +1163,8 @@ elf_arc_relocate_section (bfd *                   output_bfd,
 				    + sec->output_offset;
 
 	          // Create dynamic relocation for local sym
-	          //ADD_RELA (output_bfd, got, entry->offset, 0, R_ARC_TLS_DTPMOD, 0);
-	          //ADD_RELA (output_bfd, got, entry->offset+4, 0, R_ARC_TLS_DTPOFF, 0);
+	          ADD_RELA (output_bfd, got, entry->offset, 0, R_ARC_TLS_DTPMOD, 0);
+	          ADD_RELA (output_bfd, got, entry->offset+4, 0, R_ARC_TLS_DTPOFF, 0);
 
 	          bfd_vma sec_vma = sec->output_section->vma + sec->output_offset;
 	          bfd_put_32(output_bfd, sym_vma - sec_vma, htab->sgot->contents + entry->offset + 4);
@@ -1785,7 +1785,7 @@ elf_arc_check_relocs (bfd *                      abfd,
 	      if(h->got.glist == NULL)
 		{
 		  bfd_vma offset = 
-	      	    ADD_SYMBOL_REF_SEC_AND_RELOC (got, bfd_link_pic (info), h);
+	      	    ADD_SYMBOL_REF_SEC_AND_RELOC (got, TRUE, h);
 	      	  new_got_entry_to_list(&h->got.glist, GOT_NORMAL, offset, NONE);
 		}  
 	    }
