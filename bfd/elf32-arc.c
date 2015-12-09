@@ -1721,7 +1721,7 @@ elf_arc_check_relocs (bfd *                      abfd,
 		(*_bfd_error_handler)
 		  (_("%B: relocation %s against `%s' can not be used when making a shared object; recompile with -fPIC"),
 	            abfd,
-		    arc_elf32_bfd_reloc_type_lookup(abfd, rel->r_info)->name,
+		    ARC_ELF_HOWTO(r_type)->name,
 		    name);
 	        bfd_set_error (bfd_error_bad_value);
 	        return FALSE;
