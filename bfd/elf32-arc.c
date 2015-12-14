@@ -262,7 +262,7 @@ arc_bfd_get_32 (bfd * abfd, void *loc, asection * input_section)
 {
   long insn = bfd_get_32 (abfd, loc);
 
-  if (!bfd_big_endian (abfd)
+  if (!bfd_big_endian (abfd) // Is little endian
       && input_section
       && (input_section->flags & SEC_CODE))
     insn = ((0x0000fffff & insn) << 16) | ((0xffff0000 & insn) >> 16);
@@ -825,6 +825,8 @@ get_middle_endian_relocation (bfd_vma reloc)
 #define _SDA_BASE_ (reloc_data.sdata_begin_symbol_vma)
 #define TLS_TBSS (8) // TCB_BASE_OFFSET + TCB_SIZE
 
+#define NON_ME(VALUE) reverse_me(reloc_data, VALUE)
+
 #define none (0)
 
 #define PRINT_DEBUG_RELOC_INFO_BEFORE(FORMULA) \
@@ -874,6 +876,15 @@ get_middle_endian_relocation (bfd_vma reloc)
       PRINT_DEBUG_RELOC_INFO_AFTER \
     } \
     break;
+
+bfd_vma
+reverse_me(struct arc_relocation_data reloc_data, bfd_vma relocation)
+{
+  if(reloc_data.input_section && reloc_data.input_section->flags & SEC_CODE)
+    return ((0x0000fffff & relocation) << 16) | ((0xffff0000 & relocation) >> 16);
+  else
+    return relocation;
+}
 
 static bfd_reloc_status_type
 arc_do_relocation (bfd_byte * contents, struct arc_relocation_data reloc_data, struct bfd_link_info *info)
@@ -1925,6 +1936,8 @@ plt_do_relocs_for_symbol (bfd *abfd,
         	         + plt_offset + reloc_offset;
 	}
 
+      // TODO: being ME is not a property of the relocation but of the
+      // section of which is applying the relocation
       if (IS_MIDDLE_ENDIAN (reloc->symbol) || bfd_big_endian (abfd))
 	{
 	  relocation = 

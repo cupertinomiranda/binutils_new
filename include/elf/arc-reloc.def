@@ -31,7 +31,7 @@ ARC_RELOC_HOWTO(ARC_32, 4, \
                 32, \
                 replace_word32, \
                 bitfield, \
-                ( S + A ))
+                (NON_ME ( S + A ) ))
 
 ARC_RELOC_HOWTO(ARC_N8, 8, \
                 0, \
