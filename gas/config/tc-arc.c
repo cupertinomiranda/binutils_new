@@ -1303,9 +1303,9 @@ md_apply_fix (fixS *fixP,
     {
     case BFD_RELOC_ARC_TLS_DTPOFF:
     case BFD_RELOC_ARC_TLS_LE_32:
-      /* Note: those two relocations were setting the insn immediate
-	 with the value of the addendum in the old assembler.  Now, we
-	 just let the addendum where it is.  */
+      if (fixP->fx_done)
+	break;
+      fixP->fx_offset = 0;
       /* Fall through.  */
     case BFD_RELOC_ARC_TLS_GD_GOT:
     case BFD_RELOC_ARC_TLS_IE_GOT:
@@ -1367,6 +1367,12 @@ md_apply_fix (fixS *fixP,
 	 from ld rx,[pcl,@sym@gotpc] to add rx,pcl,@sym@gotpc.  */
       as_bad (_("Unsupported operation on reloc"));
       return;
+
+    case BFD_RELOC_ARC_TLS_DTPOFF:
+    case BFD_RELOC_ARC_TLS_LE_32:
+      gas_assert (!fixP->fx_addsy);
+      gas_assert (!fixP->fx_subsy);
+
     case BFD_RELOC_ARC_GOTOFF:
     case BFD_RELOC_ARC_32_ME:
     case BFD_RELOC_ARC_PC32:
