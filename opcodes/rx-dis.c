@@ -74,7 +74,7 @@ static char const * condition_names[] =
 {
   /* condition codes */
   "eq", "ne", "c", "nc", "gtu", "leu", "pz", "n",
-  "ge", "lt", "gt", "le", "o", "no", "always", "never"
+  "ge", "lt", "gt", "le", "o", "no", "<invalid>", "<invalid>"
 };
 
 static const char * flag_names[] =
@@ -168,7 +168,7 @@ print_insn_rx (bfd_vma addr, disassemble_info * dis)
 	      oper = opcode.op + *s - '0';
 	      if (do_size)
 		{
-		  if (oper->type == RX_Operand_Indirect)
+		  if (oper->type == RX_Operand_Indirect || oper->type == RX_Operand_Zero_Indirect)
 		    PR (PS, "%s", size_names[oper->size]);
 		}
 	      else
@@ -189,10 +189,10 @@ print_insn_rx (bfd_vma addr, disassemble_info * dis)
 		    PR (PS, "%s", register_names[oper->reg]);
 		    break;
 		  case RX_Operand_Indirect:
-		    if (oper->addend)
-		      PR (PS, "%d[%s]", oper->addend, register_names[oper->reg]);
-		    else
-		      PR (PS, "[%s]", register_names[oper->reg]);
+		    PR (PS, "%d[%s]", oper->addend, register_names[oper->reg]);
+		    break;
+		  case RX_Operand_Zero_Indirect:
+		    PR (PS, "[%s]", register_names[oper->reg]);
 		    break;
 		  case RX_Operand_Postinc:
 		    PR (PS, "[%s+]", register_names[oper->reg]);

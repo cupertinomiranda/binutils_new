@@ -531,10 +531,12 @@ struct target_ops
       TARGET_DEFAULT_RETURN (-1);
 
     int (*to_insert_mask_watchpoint) (struct target_ops *,
-				      CORE_ADDR, CORE_ADDR, int)
+				      CORE_ADDR, CORE_ADDR,
+				      enum target_hw_bp_type)
       TARGET_DEFAULT_RETURN (1);
     int (*to_remove_mask_watchpoint) (struct target_ops *,
-				      CORE_ADDR, CORE_ADDR, int)
+				      CORE_ADDR, CORE_ADDR,
+				      enum target_hw_bp_type)
       TARGET_DEFAULT_RETURN (1);
     int (*to_stopped_by_watchpoint) (struct target_ops *)
       TARGET_DEFAULT_RETURN (0);
@@ -637,7 +639,7 @@ struct target_ops
       TARGET_DEFAULT_FUNC (default_pid_to_str);
     char *(*to_extra_thread_info) (struct target_ops *, struct thread_info *)
       TARGET_DEFAULT_RETURN (NULL);
-    char *(*to_thread_name) (struct target_ops *, struct thread_info *)
+    const char *(*to_thread_name) (struct target_ops *, struct thread_info *)
       TARGET_DEFAULT_RETURN (NULL);
     void (*to_stop) (struct target_ops *, ptid_t)
       TARGET_DEFAULT_IGNORE ();
@@ -1818,10 +1820,10 @@ extern char *normal_pid_to_str (ptid_t ptid);
 #define target_extra_thread_info(TP) \
      (current_target.to_extra_thread_info (&current_target, TP))
 
-/* Return the thread's name.  A NULL result means that the target
-   could not determine this thread's name.  */
+/* Return the thread's name, or NULL if the target is unable to determine it.
+   The returned value must not be freed by the caller.  */
 
-extern char *target_thread_name (struct thread_info *);
+extern const char *target_thread_name (struct thread_info *);
 
 /* Attempts to find the pathname of the executable file
    that was run to create a specified process.
@@ -1947,14 +1949,16 @@ extern char *target_thread_name (struct thread_info *);
    or hw_access for an access watchpoint.  Returns 0 for success, 1 if
    masked watchpoints are not supported, -1 for failure.  */
 
-extern int target_insert_mask_watchpoint (CORE_ADDR, CORE_ADDR, int);
+extern int target_insert_mask_watchpoint (CORE_ADDR, CORE_ADDR,
+					  enum target_hw_bp_type);
 
 /* Remove a masked watchpoint at ADDR with the mask MASK.
    RW may be hw_read for a read watchpoint, hw_write for a write watchpoint
    or hw_access for an access watchpoint.  Returns 0 for success, non-zero
    for failure.  */
 
-extern int target_remove_mask_watchpoint (CORE_ADDR, CORE_ADDR, int);
+extern int target_remove_mask_watchpoint (CORE_ADDR, CORE_ADDR,
+					  enum target_hw_bp_type);
 
 /* Insert a hardware breakpoint at address BP_TGT->placed_address in
    the target machine.  Returns 0 for success, and returns non-zero or
@@ -2289,6 +2293,10 @@ extern void target_preopen (int);
 
 /* Does whatever cleanup is required to get rid of all pushed targets.  */
 extern void pop_all_targets (void);
+
+/* Like pop_all_targets, but pops only targets whose stratum is at or
+   above STRATUM.  */
+extern void pop_all_targets_at_and_above (enum strata stratum);
 
 /* Like pop_all_targets, but pops only targets whose stratum is
    strictly above ABOVE_STRATUM.  */

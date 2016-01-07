@@ -23,6 +23,7 @@
 #include "vec.h"
 #include "gdb_vecs.h"
 #include "gdbtypes.h"
+#include "common/enum-flags.h"
 
 /* Opaque declarations.  */
 struct ui_file;
@@ -147,7 +148,7 @@ struct general_symbol_info
 
   ENUM_BITFIELD(language) language : LANGUAGE_BITS;
 
-  /* This is only used by Ada.  If set, then the 'mangled_lang' field
+  /* This is only used by Ada.  If set, then the 'demangled_name' field
      of language_specific is valid.  Otherwise, the 'obstack' field is
      valid.  */
   unsigned int ada_mangled : 1;
@@ -831,6 +832,10 @@ struct block_symbol
 
 extern const struct symbol_impl *symbol_impls;
 
+/* For convenience.  All fields are NULL.  This means "there is no
+   symbol".  */
+extern const struct block_symbol null_block_symbol;
+
 /* Note: There is no accessor macro for symbol.owner because it is
    "private".  */
 
@@ -1470,7 +1475,7 @@ extern int identify_source_line (struct symtab *, int, int, CORE_ADDR);
 
 /* Flags passed as 4th argument to print_source_lines.  */
 
-enum print_source_lines_flags
+enum print_source_lines_flag
   {
     /* Do not print an error message.  */
     PRINT_SOURCE_LINES_NOERROR = (1 << 0),
@@ -1478,9 +1483,10 @@ enum print_source_lines_flags
     /* Print the filename in front of the source lines.  */
     PRINT_SOURCE_LINES_FILENAME = (1 << 1)
   };
+DEF_ENUM_FLAGS_TYPE (enum print_source_lines_flag, print_source_lines_flags);
 
 extern void print_source_lines (struct symtab *, int, int,
-				enum print_source_lines_flags);
+				print_source_lines_flags);
 
 extern void forget_cached_source_info_for_objfile (struct objfile *);
 extern void forget_cached_source_info (void);

@@ -279,7 +279,7 @@ alent;
 /* Object and core file sections.  */
 
 #define	align_power(addr, align)	\
-  (((addr) + ((bfd_vma) 1 << (align)) - 1) & ((bfd_vma) -1 << (align)))
+  (((addr) + ((bfd_vma) 1 << (align)) - 1) & (-((bfd_vma) 1 << (align))))
 
 typedef struct bfd_section *sec_ptr;
 
@@ -856,6 +856,23 @@ extern bfd_boolean bfd_elf32_arm_vfp11_erratum_scan
 extern void bfd_elf32_arm_vfp11_fix_veneer_locations
   (bfd *, struct bfd_link_info *);
 
+/* ARM STM STM32L4XX erratum workaround support.  */
+typedef enum
+{
+  BFD_ARM_STM32L4XX_FIX_NONE,
+  BFD_ARM_STM32L4XX_FIX_DEFAULT,
+  BFD_ARM_STM32L4XX_FIX_ALL
+} bfd_arm_stm32l4xx_fix;
+
+extern void bfd_elf32_arm_set_stm32l4xx_fix
+  (bfd *, struct bfd_link_info *);
+
+extern bfd_boolean bfd_elf32_arm_stm32l4xx_erratum_scan
+  (bfd *, struct bfd_link_info *);
+
+extern void bfd_elf32_arm_stm32l4xx_fix_veneer_locations
+  (bfd *, struct bfd_link_info *);
+
 /* ARM Interworking support.  Called from linker.  */
 extern bfd_boolean bfd_arm_allocate_interworking_sections
   (struct bfd_link_info *);
@@ -885,7 +902,7 @@ extern bfd_boolean bfd_elf32_arm_process_before_allocation
 
 void bfd_elf32_arm_set_target_relocs
   (bfd *, struct bfd_link_info *, int, char *, int, int, bfd_arm_vfp11_fix,
-   int, int, int, int, int);
+   bfd_arm_stm32l4xx_fix, int, int, int, int, int);
 
 extern bfd_boolean bfd_elf32_arm_get_bfd_for_interworking
   (bfd *, struct bfd_link_info *);
@@ -1793,7 +1810,7 @@ void bfd_section_list_clear (bfd *);
 
 asection *bfd_get_section_by_name (bfd *abfd, const char *name);
 
-asection *bfd_get_next_section_by_name (asection *sec);
+asection *bfd_get_next_section_by_name (bfd *ibfd, asection *sec);
 
 asection *bfd_get_linker_section (bfd *abfd, const char *name);
 
@@ -3177,6 +3194,7 @@ instruction.  */
   BFD_RELOC_386_TLS_DESC_CALL,
   BFD_RELOC_386_TLS_DESC,
   BFD_RELOC_386_IRELATIVE,
+  BFD_RELOC_386_GOT32X,
 
 /* x86-64/elf relocations  */
   BFD_RELOC_X86_64_GOT32,
@@ -3208,6 +3226,8 @@ instruction.  */
   BFD_RELOC_X86_64_IRELATIVE,
   BFD_RELOC_X86_64_PC32_BND,
   BFD_RELOC_X86_64_PLT32_BND,
+  BFD_RELOC_X86_64_GOTPCRELX,
+  BFD_RELOC_X86_64_REX_GOTPCRELX,
 
 /* ns32k relocations  */
   BFD_RELOC_NS32K_IMM_8,
@@ -3283,6 +3303,7 @@ instruction.  */
   BFD_RELOC_PPC_VLE_SDAREL_HI16D,
   BFD_RELOC_PPC_VLE_SDAREL_HA16A,
   BFD_RELOC_PPC_VLE_SDAREL_HA16D,
+  BFD_RELOC_PPC_REL16DX_HA,
   BFD_RELOC_PPC64_HIGHER,
   BFD_RELOC_PPC64_HIGHER_S,
   BFD_RELOC_PPC64_HIGHEST,
@@ -5557,6 +5578,12 @@ BFD_RELOC_MACH_O_PAIR.  */
 /* Pair of relocation.  Contains the first symbol.  */
   BFD_RELOC_MACH_O_PAIR,
 
+/* Symbol will be substracted.  Must be followed by a BFD_RELOC_32.  */
+  BFD_RELOC_MACH_O_SUBTRACTOR32,
+
+/* Symbol will be substracted.  Must be followed by a BFD_RELOC_64.  */
+  BFD_RELOC_MACH_O_SUBTRACTOR64,
+
 /* PCREL relocations.  They are marked as branch to create PLT entry if
 required.  */
   BFD_RELOC_MACH_O_X86_64_BRANCH32,
@@ -5569,12 +5596,6 @@ required.  */
 the linker could optimize the movq to a leaq if possible.  */
   BFD_RELOC_MACH_O_X86_64_GOT_LOAD,
 
-/* Symbol will be substracted.  Must be followed by a BFD_RELOC_64.  */
-  BFD_RELOC_MACH_O_X86_64_SUBTRACTOR32,
-
-/* Symbol will be substracted.  Must be followed by a BFD_RELOC_64.  */
-  BFD_RELOC_MACH_O_X86_64_SUBTRACTOR64,
-
 /* Same as BFD_RELOC_32_PCREL but with an implicit -1 addend.  */
   BFD_RELOC_MACH_O_X86_64_PCREL32_1,
 
@@ -5583,6 +5604,18 @@ the linker could optimize the movq to a leaq if possible.  */
 
 /* Same as BFD_RELOC_32_PCREL but with an implicit -4 addend.  */
   BFD_RELOC_MACH_O_X86_64_PCREL32_4,
+
+/* Addend for PAGE or PAGEOFF.  */
+  BFD_RELOC_MACH_O_ARM64_ADDEND,
+
+/* Relative offset to page of GOT slot.  */
+  BFD_RELOC_MACH_O_ARM64_GOT_LOAD_PAGE21,
+
+/* Relative offset within page of GOT slot.  */
+  BFD_RELOC_MACH_O_ARM64_GOT_LOAD_PAGEOFF12,
+
+/* Address of a GOT entry.  */
+  BFD_RELOC_MACH_O_ARM64_POINTER_TO_GOT,
 
 /* This is a 32 bit reloc for the microblaze that stores the
 low 16 bits of a value  */

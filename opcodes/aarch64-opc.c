@@ -1659,7 +1659,7 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	  break;
 
 	case AARCH64_OPND_WIDTH:
-	  assert (idx == 3 && opnds[idx-1].type == AARCH64_OPND_IMM
+	  assert (idx > 1 && opnds[idx-1].type == AARCH64_OPND_IMM
 		  && opnds[0].type == AARCH64_OPND_Rd);
 	  size = get_upper_bound (qualifier);
 	  if (opnd->imm.value + opnds[idx-1].imm.value > size)
@@ -1862,6 +1862,14 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	{
 	case AARCH64_OPND_PSTATEFIELD:
 	  assert (idx == 0 && opnds[1].type == AARCH64_OPND_UIMM4);
+	  /* MSR PAN, #uimm4
+	     The immediate must be #0 or #1.  */
+	  if (opnd->pstatefield == 0x04 /* PAN.  */
+	      && opnds[1].imm.value > 1)
+	    {
+	      set_imm_out_of_range_error (mismatch_detail, idx, 0, 1);
+	      return 0;
+	    }
 	  /* MSR SPSel, #uimm4
 	     Uses uimm4 as a control value to select the stack pointer: if
 	     bit 0 is set it selects the current exception level's stack
@@ -2164,14 +2172,22 @@ typedef union
   float    f;
 } single_conv_t;
 
+typedef union
+{
+  uint32_t i;
+  float    f;
+} half_conv_t;
+
 /* IMM8 is an 8-bit floating-point constant with sign, 3-bit exponent and
    normalized 4 bits of precision, encoded in "a:b:c:d:e:f:g:h" or FLD_imm8
    (depending on the type of the instruction).  IMM8 will be expanded to a
-   single-precision floating-point value (IS_DP == 0) or a double-precision
-   floating-point value (IS_DP == 1).  The expanded value is returned.  */
+   single-precision floating-point value (SIZE == 4) or a double-precision
+   floating-point value (SIZE == 8).  A half-precision floating-point value
+   (SIZE == 2) is expanded to a single-precision floating-point value.  The
+   expanded value is returned.  */
 
 static uint64_t
-expand_fp_imm (int is_dp, uint32_t imm8)
+expand_fp_imm (int size, uint32_t imm8)
 {
   uint64_t imm;
   uint32_t imm8_7, imm8_6_0, imm8_6, imm8_6_repl4;
@@ -2181,7 +2197,7 @@ expand_fp_imm (int is_dp, uint32_t imm8)
   imm8_6 = imm8_6_0 >> 6;	/* imm8<6>   */
   imm8_6_repl4 = (imm8_6 << 3) | (imm8_6 << 2)
     | (imm8_6 << 1) | imm8_6;	/* Replicate(imm8<6>,4) */
-  if (is_dp)
+  if (size == 8)
     {
       imm = (imm8_7 << (63-32))		/* imm8<7>  */
 	| ((imm8_6 ^ 1) << (62-32))	/* NOT(imm8<6)	*/
@@ -2190,12 +2206,17 @@ expand_fp_imm (int is_dp, uint32_t imm8)
 	| (imm8_6_0 << (48-32));	/* imm8<6>:imm8<5:0>    */
       imm <<= 32;
     }
-  else
+  else if (size == 4 || size == 2)
     {
       imm = (imm8_7 << 31)	/* imm8<7>              */
 	| ((imm8_6 ^ 1) << 30)	/* NOT(imm8<6>)         */
 	| (imm8_6_repl4 << 26)	/* Replicate(imm8<6>,4) */
 	| (imm8_6_0 << 19);	/* imm8<6>:imm8<5:0>    */
+    }
+  else
+    {
+      /* An unsupported size.  */
+      assert (0);
     }
 
   return imm;
@@ -2525,17 +2546,24 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_SIMD_FPIMM:
       switch (aarch64_get_qualifier_esize (opnds[0].qualifier))
 	{
+	case 2:	/* e.g. FMOV <Hd>, #<imm>.  */
+	    {
+	      half_conv_t c;
+	      c.i = expand_fp_imm (2, opnd->imm.value);
+	      snprintf (buf, size,  "#%.18e", c.f);
+	    }
+	  break;
 	case 4:	/* e.g. FMOV <Vd>.4S, #<imm>.  */
 	    {
 	      single_conv_t c;
-	      c.i = expand_fp_imm (0, opnd->imm.value);
+	      c.i = expand_fp_imm (4, opnd->imm.value);
 	      snprintf (buf, size,  "#%.18e", c.f);
 	    }
 	  break;
 	case 8:	/* e.g. FMOV <Sd>, #<imm>.  */
 	    {
 	      double_conv_t c;
-	      c.i = expand_fp_imm (1, opnd->imm.value);
+	      c.i = expand_fp_imm (8, opnd->imm.value);
 	      snprintf (buf, size,  "#%.18e", c.d);
 	    }
 	  break;
@@ -2735,7 +2763,9 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 const aarch64_sys_reg aarch64_sys_regs [] =
 {
   { "spsr_el1",         CPEN_(0,C0,0),	0 }, /* = spsr_svc */
+  { "spsr_el12",	CPEN_ (5, C0, 0), F_ARCHEXT },
   { "elr_el1",          CPEN_(0,C0,1),	0 },
+  { "elr_el12",	CPEN_ (5, C0, 1), F_ARCHEXT },
   { "sp_el0",           CPEN_(0,C1,0),	0 },
   { "spsel",            CPEN_(0,C2,0),	0 },
   { "daif",             CPEN_(3,C2,1),	0 },
@@ -2791,6 +2821,7 @@ const aarch64_sys_reg aarch64_sys_regs [] =
   { "id_aa64isar1_el1", CPENC(3,0,C0,C6,1),	0 }, /* RO */
   { "id_aa64mmfr0_el1", CPENC(3,0,C0,C7,0),	0 }, /* RO */
   { "id_aa64mmfr1_el1", CPENC(3,0,C0,C7,1),	0 }, /* RO */
+  { "id_aa64mmfr2_el1", CPENC (3, 0, C0, C7, 2), F_ARCHEXT }, /* RO */
   { "id_aa64afr0_el1",  CPENC(3,0,C0,C5,4),	0 }, /* RO */
   { "id_aa64afr1_el1",  CPENC(3,0,C0,C5,5),	0 }, /* RO */
   { "clidr_el1",        CPENC(3,1,C0,C0,1),	0 }, /* RO */
@@ -2800,10 +2831,12 @@ const aarch64_sys_reg aarch64_sys_regs [] =
   { "sctlr_el1",        CPENC(3,0,C1,C0,0),	0 },
   { "sctlr_el2",        CPENC(3,4,C1,C0,0),	0 },
   { "sctlr_el3",        CPENC(3,6,C1,C0,0),	0 },
+  { "sctlr_el12",	CPENC (3, 5, C1, C0, 0), F_ARCHEXT },
   { "actlr_el1",        CPENC(3,0,C1,C0,1),	0 },
   { "actlr_el2",        CPENC(3,4,C1,C0,1),	0 },
   { "actlr_el3",        CPENC(3,6,C1,C0,1),	0 },
   { "cpacr_el1",        CPENC(3,0,C1,C0,2),	0 },
+  { "cpacr_el12",	CPENC (3, 5, C1, C0, 2), F_ARCHEXT },
   { "cptr_el2",         CPENC(3,4,C1,C1,2),	0 },
   { "cptr_el3",         CPENC(3,6,C1,C1,2),	0 },
   { "scr_el3",          CPENC(3,6,C1,C1,0),	0 },
@@ -2815,36 +2848,47 @@ const aarch64_sys_reg aarch64_sys_regs [] =
   { "ttbr0_el1",        CPENC(3,0,C2,C0,0),	0 },
   { "ttbr1_el1",        CPENC(3,0,C2,C0,1),	0 },
   { "ttbr0_el2",        CPENC(3,4,C2,C0,0),	0 },
+  { "ttbr1_el2",	CPENC (3, 4, C2, C0, 1), F_ARCHEXT },
   { "ttbr0_el3",        CPENC(3,6,C2,C0,0),	0 },
+  { "ttbr0_el12",	CPENC (3, 5, C2, C0, 0), F_ARCHEXT },
+  { "ttbr1_el12",	CPENC (3, 5, C2, C0, 1), F_ARCHEXT },
   { "vttbr_el2",        CPENC(3,4,C2,C1,0),	0 },
   { "tcr_el1",          CPENC(3,0,C2,C0,2),	0 },
   { "tcr_el2",          CPENC(3,4,C2,C0,2),	0 },
   { "tcr_el3",          CPENC(3,6,C2,C0,2),	0 },
+  { "tcr_el12",		CPENC (3, 5, C2, C0, 2), F_ARCHEXT },
   { "vtcr_el2",         CPENC(3,4,C2,C1,2),	0 },
   { "afsr0_el1",        CPENC(3,0,C5,C1,0),	0 },
   { "afsr1_el1",        CPENC(3,0,C5,C1,1),	0 },
   { "afsr0_el2",        CPENC(3,4,C5,C1,0),	0 },
   { "afsr1_el2",        CPENC(3,4,C5,C1,1),	0 },
   { "afsr0_el3",        CPENC(3,6,C5,C1,0),	0 },
+  { "afsr0_el12",	CPENC (3, 5, C5, C1, 0), F_ARCHEXT },
   { "afsr1_el3",        CPENC(3,6,C5,C1,1),	0 },
+  { "afsr1_el12",	CPENC (3, 5, C5, C1, 1), F_ARCHEXT },
   { "esr_el1",          CPENC(3,0,C5,C2,0),	0 },
   { "esr_el2",          CPENC(3,4,C5,C2,0),	0 },
   { "esr_el3",          CPENC(3,6,C5,C2,0),	0 },
+  { "esr_el12",		CPENC (3, 5, C5, C2, 0), F_ARCHEXT },
   { "fpexc32_el2",      CPENC(3,4,C5,C3,0),	0 },
   { "far_el1",          CPENC(3,0,C6,C0,0),	0 },
   { "far_el2",          CPENC(3,4,C6,C0,0),	0 },
   { "far_el3",          CPENC(3,6,C6,C0,0),	0 },
+  { "far_el12",		CPENC (3, 5, C6, C0, 0), F_ARCHEXT },
   { "hpfar_el2",        CPENC(3,4,C6,C0,4),	0 },
   { "par_el1",          CPENC(3,0,C7,C4,0),	0 },
   { "mair_el1",         CPENC(3,0,C10,C2,0),	0 },
   { "mair_el2",         CPENC(3,4,C10,C2,0),	0 },
   { "mair_el3",         CPENC(3,6,C10,C2,0),	0 },
+  { "mair_el12",	CPENC (3, 5, C10, C2, 0), F_ARCHEXT },
   { "amair_el1",        CPENC(3,0,C10,C3,0),	0 },
   { "amair_el2",        CPENC(3,4,C10,C3,0),	0 },
   { "amair_el3",        CPENC(3,6,C10,C3,0),	0 },
+  { "amair_el12",	CPENC (3, 5, C10, C3, 0), F_ARCHEXT },
   { "vbar_el1",         CPENC(3,0,C12,C0,0),	0 },
   { "vbar_el2",         CPENC(3,4,C12,C0,0),	0 },
   { "vbar_el3",         CPENC(3,6,C12,C0,0),	0 },
+  { "vbar_el12",	CPENC (3, 5, C12, C0, 0), F_ARCHEXT },
   { "rvbar_el1",        CPENC(3,0,C12,C0,1),	0 }, /* RO */
   { "rvbar_el2",        CPENC(3,4,C12,C0,1),	0 }, /* RO */
   { "rvbar_el3",        CPENC(3,6,C12,C0,1),	0 }, /* RO */
@@ -2853,6 +2897,8 @@ const aarch64_sys_reg aarch64_sys_regs [] =
   { "rmr_el3",          CPENC(3,6,C12,C0,2),	0 },
   { "isr_el1",          CPENC(3,0,C12,C1,0),	0 }, /* RO */
   { "contextidr_el1",   CPENC(3,0,C13,C0,1),	0 },
+  { "contextidr_el2",	CPENC (3, 4, C13, C0, 1), F_ARCHEXT },
+  { "contextidr_el12",	CPENC (3, 5, C13, C0, 1), F_ARCHEXT },
   { "tpidr_el0",        CPENC(3,3,C13,C0,2),	0 },
   { "tpidrro_el0",      CPENC(3,3,C13,C0,3),	0 }, /* RO */
   { "tpidr_el1",        CPENC(3,0,C13,C0,4),	0 },
@@ -2864,19 +2910,29 @@ const aarch64_sys_reg aarch64_sys_regs [] =
   { "cntvct_el0",       CPENC(3,3,C14,C0,2),	0 }, /* RO */
   { "cntvoff_el2",      CPENC(3,4,C14,C0,3),	0 },
   { "cntkctl_el1",      CPENC(3,0,C14,C1,0),	0 },
+  { "cntkctl_el12",	CPENC (3, 5, C14, C1, 0), F_ARCHEXT },
   { "cnthctl_el2",      CPENC(3,4,C14,C1,0),	0 },
   { "cntp_tval_el0",    CPENC(3,3,C14,C2,0),	0 },
+  { "cntp_tval_el02",	CPENC (3, 5, C14, C2, 0), F_ARCHEXT },
   { "cntp_ctl_el0",     CPENC(3,3,C14,C2,1),	0 },
+  { "cntp_ctl_el02",	CPENC (3, 5, C14, C2, 1), F_ARCHEXT },
   { "cntp_cval_el0",    CPENC(3,3,C14,C2,2),	0 },
+  { "cntp_cval_el02",	CPENC (3, 5, C14, C2, 2), F_ARCHEXT },
   { "cntv_tval_el0",    CPENC(3,3,C14,C3,0),	0 },
+  { "cntv_tval_el02",	CPENC (3, 5, C14, C3, 0), F_ARCHEXT },
   { "cntv_ctl_el0",     CPENC(3,3,C14,C3,1),	0 },
+  { "cntv_ctl_el02",	CPENC (3, 5, C14, C3, 1), F_ARCHEXT },
   { "cntv_cval_el0",    CPENC(3,3,C14,C3,2),	0 },
+  { "cntv_cval_el02",	CPENC (3, 5, C14, C3, 2), F_ARCHEXT },
   { "cnthp_tval_el2",   CPENC(3,4,C14,C2,0),	0 },
   { "cnthp_ctl_el2",    CPENC(3,4,C14,C2,1),	0 },
   { "cnthp_cval_el2",   CPENC(3,4,C14,C2,2),	0 },
   { "cntps_tval_el1",   CPENC(3,7,C14,C2,0),	0 },
   { "cntps_ctl_el1",    CPENC(3,7,C14,C2,1),	0 },
   { "cntps_cval_el1",   CPENC(3,7,C14,C2,2),	0 },
+  { "cnthv_tval_el2",	CPENC (3, 4, C14, C3, 0), F_ARCHEXT },
+  { "cnthv_ctl_el2",	CPENC (3, 4, C14, C3, 1), F_ARCHEXT },
+  { "cnthv_cval_el2",	CPENC (3, 4, C14, C3, 2), F_ARCHEXT },
   { "dacr32_el2",       CPENC(3,4,C3,C0,0),	0 },
   { "ifsr32_el2",       CPENC(3,4,C5,C0,1),	0 },
   { "teehbr32_el1",     CPENC(2,2,C1,C0,0),	0 },
@@ -3061,6 +3117,49 @@ aarch64_sys_reg_supported_p (const aarch64_feature_set features,
   /* PAN.  Values are from aarch64_sys_regs.  */
   if (reg->value == CPEN_(0,C2,3)
       && !AARCH64_CPU_HAS_FEATURE (features, AARCH64_FEATURE_PAN))
+    return FALSE;
+
+  /* Virtualization host extensions: system registers.  */
+  if ((reg->value == CPENC (3, 4, C2, C0, 1)
+       || reg->value == CPENC (3, 4, C13, C0, 1)
+       || reg->value == CPENC (3, 4, C14, C3, 0)
+       || reg->value == CPENC (3, 4, C14, C3, 1)
+       || reg->value == CPENC (3, 4, C14, C3, 2))
+      && !AARCH64_CPU_HAS_FEATURE (features, AARCH64_FEATURE_V8_1))
+      return FALSE;
+
+  /* Virtualization host extensions: *_el12 names of *_el1 registers.  */
+  if ((reg->value == CPEN_ (5, C0, 0)
+       || reg->value == CPEN_ (5, C0, 1)
+       || reg->value == CPENC (3, 5, C1, C0, 0)
+       || reg->value == CPENC (3, 5, C1, C0, 2)
+       || reg->value == CPENC (3, 5, C2, C0, 0)
+       || reg->value == CPENC (3, 5, C2, C0, 1)
+       || reg->value == CPENC (3, 5, C2, C0, 2)
+       || reg->value == CPENC (3, 5, C5, C1, 0)
+       || reg->value == CPENC (3, 5, C5, C1, 1)
+       || reg->value == CPENC (3, 5, C5, C2, 0)
+       || reg->value == CPENC (3, 5, C6, C0, 0)
+       || reg->value == CPENC (3, 5, C10, C2, 0)
+       || reg->value == CPENC (3, 5, C10, C3, 0)
+       || reg->value == CPENC (3, 5, C12, C0, 0)
+       || reg->value == CPENC (3, 5, C13, C0, 1)
+       || reg->value == CPENC (3, 5, C14, C1, 0))
+      && !AARCH64_CPU_HAS_FEATURE (features, AARCH64_FEATURE_V8_1))
+    return FALSE;
+
+  /* Virtualization host extensions: *_el02 names of *_el0 registers.  */
+  if ((reg->value == CPENC (3, 5, C14, C2, 0)
+       || reg->value == CPENC (3, 5, C14, C2, 1)
+       || reg->value == CPENC (3, 5, C14, C2, 2)
+       || reg->value == CPENC (3, 5, C14, C3, 0)
+       || reg->value == CPENC (3, 5, C14, C3, 1)
+       || reg->value == CPENC (3, 5, C14, C3, 2))
+      && !AARCH64_CPU_HAS_FEATURE (features, AARCH64_FEATURE_V8_1))
+
+  /* ARMv8.2 features.  */
+  if (reg->value == CPENC (3, 0, C0, C7, 2)
+      && !AARCH64_CPU_HAS_FEATURE (features, AARCH64_FEATURE_V8_2))
     return FALSE;
 
   return TRUE;

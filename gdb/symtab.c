@@ -85,6 +85,9 @@ static struct block_symbol
   lookup_symbol_in_objfile (struct objfile *objfile, int block_index,
 			    const char *name, const domain_enum domain);
 
+/* See symtab.h.  */
+const struct block_symbol null_block_symbol = { NULL, NULL };
+
 extern initialize_file_ftype _initialize_symtab;
 
 /* Program space key for finding name and language of "main".  */
@@ -5422,7 +5425,7 @@ default_make_symbol_completion_list_break_on_1 (const char *text,
       /* These languages may have parameters entered by user but they are never
 	 present in the partial symbol tables.  */
 
-      const char *cs = memchr (sym_text, '(', sym_text_len);
+      const char *cs = (const char *) memchr (sym_text, '(', sym_text_len);
 
       if (cs)
 	sym_text_len = cs - sym_text;

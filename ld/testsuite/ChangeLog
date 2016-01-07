@@ -1,3 +1,254 @@
+2015-11-11  Alan Modra  <amodra@gmail.com>
+	    Peter Bergner <bergner@vnet.ibm.com>
+
+	* ld-powerpc/addpcis.d: New test.
+	* ld-powerpc/addpcis.s: New test.
+	* ld-powerpc/powerpc.exp: Run it.
+
+2015-11-03  Renlin Li  <renlin.li@arm.com>
+
+	* ld-aarch64/aarch64-elf.exp: Run newly added test cases.
+	* ld-aarch64/emit-relocs-301.d: Skip aarch64_be.
+	* ld-aarch64/emit-relocs-302.d: Likwise.
+	* ld-aarch64/emit-relocs-310.d: Likwise.
+	* ld-aarch64/emit-relocs-515.d: Likwise.
+	* ld-aarch64/emit-relocs-516.d: Likwise.
+	* ld-aarch64/tls-large-desc.d: Likwise.
+	* ld-aarch64/tls-large-ie.d: Likwise.
+	* ld-aarch64/tls-relax-large-desc-ie.d: Likwise.
+	* ld-aarch64/tls-relax-large-desc-le.d: Likwise.
+	* ld-aarch64/tls-relax-large-gd-ie.d: Likwise.
+	* ld-aarch64/tls-relax-large-gd-le.d: Likwise.
+	* ld-aarch64/emit-relocs-301-be.d: New for aarch64_be.
+	* ld-aarch64/emit-relocs-302-be.d: Likewise.
+	* ld-aarch64/emit-relocs-310-be.d: Likewise.
+	* ld-aarch64/emit-relocs-515-be.d: Likewise.
+	* ld-aarch64/emit-relocs-516-be.d: Likewise.
+	* ld-aarch64/tls-large-desc-be.d: Likewise.
+	* ld-aarch64/tls-large-ie-be.d: Likewise.
+	* ld-aarch64/tls-relax-large-desc-ie-be.d: Likewise.
+	* ld-aarch64/tls-relax-large-desc-le-be.d: Likewise.
+	* ld-aarch64/tls-relax-large-gd-ie-be.d: Likewise.
+	* ld-aarch64/tls-relax-large-gd-le-be.d: Likewise.
+
+2015-10-29  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ld-x86-64/plt-main3.rd: Also check GOTPCRELX.
+
+2015-10-29  Catherine Moore  <clm@codesourcery.com>
+    
+    	* ld-mips-elf/mips16-fp-stub-1.s: New.
+    	* ld-mips-elf/mips16-fp-stub-2.s: New.
+    	* ld-mips-elf/mips16-fp-stub.d: New.
+    	* ld-mips-elf/mips-elf.exp: Run new tests.
+    	* ld-mips-elf/mips16-intermix.d: Update expected output.
+
+2015-10-28  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/19162
+	* ld-x86-64/x86-64.exp: Run pr19162.
+	* ld-x86-64/pr19162.d: New file.
+	* ld-x86-64/pr19162a.s: Likewise.
+	* ld-x86-64/pr19162b.s: Likewise.
+
+2015-10-27  Laurent Alfonsi <laurent.alfonsi@st.com>
+            Christophe Monat <christophe.monat@st.com>
+
+	* ld-arm/arm-elf.exp (armelftests_common): Add STM32L4XX
+	tests.
+	* ld-arm/stm32l4xx-cannot-fix-far-ldm.d: New.
+	* ld-arm/stm32l4xx-cannot-fix-far-ldm.s: Likewise.
+	* ld-arm/stm32l4xx-cannot-fix-it-block.d: Likewise.
+	* ld-arm/stm32l4xx-cannot-fix-it-block.s: Likewise.
+	* ld-arm/stm32l4xx-fix-all.d: Likewise.
+	* ld-arm/stm32l4xx-fix-all.s: Likewise.
+	* ld-arm/stm32l4xx-fix-it-block.d: Likewise.
+	* ld-arm/stm32l4xx-fix-it-block.s: Likewise.
+	* ld-arm/stm32l4xx-fix-ldm.d: Likewise.
+	* ld-arm/stm32l4xx-fix-ldm.s: Likewise.
+	* ld-arm/stm32l4xx-fix-vldm.d: Likewise.
+	* ld-arm/stm32l4xx-fix-vldm.s: Likewise.
+
+2015-10-27  Alan Modra  <amodra@gmail.com>
+
+	* ld-gc/pr19161.d: xfail hppa-*-*.
+
+2015-10-26  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/19175
+	* ld-i386/i386.exp: Run pr19175.
+	* ld-x86-64/x86-64.exp: Likewise.
+	* ld-i386/pr19175.d: New file.
+	* ld-i386/pr19175.s: Likewise.
+	* ld-i386/pr19175.t: Likewise.
+	* ld-x86-64/pr19175.d: Likewise.
+	* ld-x86-64/pr19175.s: Likewise.
+	* ld-x86-64/pr19175.t: Likewise.
+
+2015-10-26  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/19171
+	* ld-i386/lea1.s: Add tests for address load of __start_XXX
+	and __stop_XXX.
+	* ld-i386/mov1.s: Likewise.
+	* ld-x86-64/lea1.s: Likewise.
+	* ld-x86-64/mov1.s: Likewise.
+	* ld-i386/lea1a.d: Updated.
+	* ld-i386/lea1b.d: Likewise.
+	* ld-i386/lea1c.d: Likewise.
+	* ld-i386/mov1a.d: Likewise.
+	* ld-i386/mov1b.d: Likewise.
+	* ld-x86-64/lea1a.d: Likewise.
+	* ld-x86-64/lea1b.d: Likewise.
+	* ld-x86-64/lea1c.d: Likewise.
+	* ld-x86-64/lea1d.d: Likewise.
+	* ld-x86-64/lea1e.d: Likewise.
+	* ld-x86-64/lea1f.d: Likewise.
+	* ld-x86-64/mov1a.d: Likewise.
+	* ld-x86-64/mov1b.d: Likewise.
+	* ld-x86-64/mov1c.d: Likewise.
+	* ld-x86-64/mov1d.d: Likewise.
+
+2015-10-23  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/19167
+	* ld-gc/gc.exp: Run pr19167 test.
+	* ld-gc/pr19167.d: New file.
+	* ld-gc/pr19167a.s: Likewise.
+	* ld-gc/pr19167b.s: Likewise.
+
+2015-10-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/19161
+	* ld-gc/gc.exp: Run pr19161 test.
+	* ld-gc/pr19161-1.c: New file.
+	* ld-gc/pr19161-2.c: Likewise.
+	* ld-gc/pr19161.d: Likewise.
+
+2015-10-22  Hans-Peter Nilsson  <hp@bitrange.com>
+
+	* ld-scripts/script.exp (extract_symbol_test): Allow nm output of
+	objcopy --extract-symbols result to differ from original on
+	mmix-knuth-mmixware.
+
+2015-10-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ld-i386/call3.s: New file.
+	* ld-i386/call3a.d: Likewise.
+	* ld-i386/call3b.d: Likewise.
+	* ld-i386/call3c.d: Likewise.
+	* ld-i386/call3d.d: Likewise.
+	* ld-i386/call3e.d: Likewise.
+	* ld-i386/call3f.d: Likewise.
+	* ld-i386/call3g.d: Likewise.
+	* ld-i386/call3h.d: Likewise.
+	* ld-i386/load1-nacl.d: Likewise.
+	* ld-x86-64/call1.s: Likewise.
+	* ld-x86-64/call1a.d: Likewise.
+	* ld-x86-64/call1b.d: Likewise.
+	* ld-x86-64/call1c.d: Likewise.
+	* ld-x86-64/call1d.d: Likewise.
+	* ld-x86-64/call1e.d: Likewise.
+	* ld-x86-64/call1f.d: Likewise.
+	* ld-x86-64/call1g.d: Likewise.
+	* ld-x86-64/call1h.d: Likewise.
+	* ld-x86-64/call1i.d: Likewise.
+	* ld-x86-64/load1a-nacl.d: Likewise.
+	* ld-x86-64/load1b-nacl.d: Likewise.
+	* ld-x86-64/load1c-nacl.d: Likewise.
+	* ld-x86-64/load1d-nacl.d: Likewise.
+
+2015-10-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ld-ifunc/ifunc-5r-local-x86-64.d: Replace R_X86_64_GOTPCREL
+	with R_X86_64_REX_GOTPCRELX.
+	* ld-x86-64/plt-main1.rd: Likewise.
+	* ld-x86-64/plt-main3.rd: Likewise.
+	* ld-x86-64/plt-main4.rd: Likewise.
+	* ld-x86-64/gotpcrel1.dd: New file.
+	* ld-x86-64/gotpcrel1.out: Likewise.
+	* ld-x86-64/gotpcrel1a.S: Likewise.
+	* ld-x86-64/gotpcrel1b.c: Likewise.
+	* ld-x86-64/gotpcrel1c.c: Likewise.
+	* ld-x86-64/gotpcrel1d.S: Likewise.
+	* ld-x86-64/load1.s: Likewise.
+	* ld-x86-64/load1a.d: Likewise.
+	* ld-x86-64/load1b.d: Likewise.
+	* ld-x86-64/load1c.d: Likewise.
+	* ld-x86-64/load1d.d: Likewise.
+	* ld-x86-64/x86-64.exp: Run load1a, load1b, load1c and load1d
+	tests.  Run gotpcrel1 test.
+
+2015-10-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ld-i386/branch1.d: New file.
+	* ld-i386/branch1.s: Likewise.
+	* ld-i386/call1.d: Likewise.
+	* ld-i386/call1.s: Likewise.
+	* ld-i386/call2.d: Likewise.
+	* ld-i386/call2.s: Likewise.
+	* ld-i386/got1.dd: Likewise.
+	* ld-i386/got1.out: Likewise.
+	* ld-i386/got1a.S: Likewise.
+	* ld-i386/got1b.c: Likewise.
+	* ld-i386/got1c.c: Likewise.
+	* ld-i386/got1d.S: Likewise.
+	* ld-i386/jmp1.d: Likewise.
+	* ld-i386/jmp1.s: Likewise.
+	* ld-i386/jmp2.d: Likewise.
+	* ld-i386/jmp2.s: Likewise.
+	* ld-i386/load1.d: Likewise.
+	* ld-i386/load1.s: Likewise.
+	* ld-i386/load2.d: Likewise.
+	* ld-i386/load2.s: Likewise.
+	* ld-i386/load3.d: Likewise.
+	* ld-i386/load3.s: Likewise.
+	* ld-i386/load4.s: Likewise.
+	* ld-i386/load4a.d: Likewise.
+	* ld-i386/load4b.d: Likewise.
+	* ld-i386/load5.s: Likewise.
+	* ld-i386/load5a.d: Likewise.
+	* ld-i386/load5b.d: Likewise.
+	* ld-i386/load6.d: Likewise.
+	* ld-i386/load6.s: Likewise.
+	* ld-i386/i386.exp: Run branch1, call1, call2, jmp1, jmp2,
+	load1, load2, load3, load4a, load4b, load5a, load5b and load6
+	tests.  Run got1 test.
+
+2015-10-22  Andreas Krebbel  <krebbel@linux.vnet.ibm.com>
+
+	* ld-ifunc/ifunc.exp: Run ifunc tests on s390* targets.
+
+2015-10-19  Simon Dardis  <Simon.Dardis@imgtec.com>
+
+	* ld-elf/attributes.d: New test for symbol attribute copying.
+	* ld-elf/attributes.ld: Part of above.
+	* ld-elf/attributes.s: Likewise.
+
+2015-10-16  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ld-i386/lea1.s: Add a test for loading address of local common
+	symbol.
+	* ld-x86-64/lea1.s: Likewise.
+	* ld-i386/lea1a.d: Updated.
+	* ld-i386/lea1b.d: Likewise.
+	* ld-i386/lea1c.d: Likewise.
+	* ld-x86-64/lea1a.d: Likewise.
+	* ld-x86-64/lea1b.d: Likewise.
+	* ld-x86-64/lea1c.d: Likewise.
+	* ld-x86-64/lea1d.d: Likewise.
+	* ld-x86-64/lea1e.d: Likewise.
+	* ld-x86-64/lea1f.d: Likewise.
+
+2015-10-15  Alan Modra  <amodra@gmail.com>
+
+	* config/default.exp (size): New global.
+	* ld-elf/extract-symbol-1.s,
+	* ld-elf/extract-symbol-1.ld,
+	* ld-elf/extract-symbol-1sec.d,
+	* ld-elf/extract-symbol-1sym.d: Delete.
+	* ld-scripts/script.exp (extract_symbol_test): New.
+
 2015-10-12  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR ld/19073
@@ -15,12 +266,6 @@
 	PR ld/18914
 	* ld-elf/exclude.exp: Also check exclude_common.
 	* ld-elf/exclude2.s: Add exclude_common.
-
-2015-10-02  Renlin Li  <renlin.li@arm.com>
-
-	* ld-aarch64/aarch64-elf.exp (tls-relax-large-le-ie): Run new test.
-	* ld-aarch64/tls-relax-large-ie-le.d: New.
-	* ld-aarch64/tls-relax-large-ie-le.s: New.
 
 2015-10-02  Renlin Li  <renlin.li@arm.com>
 

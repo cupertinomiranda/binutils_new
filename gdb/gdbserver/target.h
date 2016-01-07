@@ -21,6 +21,7 @@
 #ifndef TARGET_H
 #define TARGET_H
 
+#include <sys/types.h> /* for mode_t */
 #include "target/target.h"
 #include "target/resume.h"
 #include "target/wait.h"
@@ -306,8 +307,9 @@ struct target_ops
   int (*read_loadmap) (const char *annex, CORE_ADDR offset,
 		       unsigned char *myaddr, unsigned int len);
 
-  /* Target specific qSupported support.  */
-  void (*process_qsupported) (const char *);
+  /* Target specific qSupported support.  FEATURES is an array of
+     features with COUNT elements.  */
+  void (*process_qsupported) (char **features, int count);
 
   /* Return 1 if the target supports tracepoints, 0 (or leave the
      callback NULL) otherwise.  */
@@ -399,11 +401,11 @@ struct target_ops
      Returns zero on success, non-zero otherwise.  */
   int (*disable_btrace) (struct btrace_target_info *tinfo);
 
-  /* Read branch trace data into buffer.  We use an int to specify the type
-     to break a cyclic dependency.
+  /* Read branch trace data into buffer.
      Return 0 on success; print an error message into BUFFER and return -1,
      otherwise.  */
-  int (*read_btrace) (struct btrace_target_info *, struct buffer *, int type);
+  int (*read_btrace) (struct btrace_target_info *, struct buffer *,
+		      enum btrace_read_type type);
 
   /* Read the branch trace configuration into BUFFER.
      Return 0 on success; print an error message into BUFFER and return -1
@@ -441,6 +443,20 @@ struct target_ops
      readlink(2).  */
   ssize_t (*multifs_readlink) (int pid, const char *filename,
 			       char *buf, size_t bufsiz);
+
+  /* Return the breakpoint kind for this target based on PC.  The PCPTR is
+     adjusted to the real memory location in case a flag (e.g., the Thumb bit on
+     ARM) was present in the PC.  */
+  int (*breakpoint_kind_from_pc) (CORE_ADDR *pcptr);
+
+  /* Return the software breakpoint from KIND.  KIND can have target
+     specific meaning like the Z0 kind parameter.
+     SIZE is set to the software breakpoint's length in memory.  */
+  const gdb_byte *(*sw_breakpoint_from_kind) (int kind, int *size);
+
+  /* Return the thread's name, or NULL if the target is unable to determine it.
+     The returned value must not be freed by the caller.  */
+  const char *(*thread_name) (ptid_t thread);
 };
 
 extern struct target_ops *the_target;
@@ -509,11 +525,11 @@ int kill_inferior (int);
   (the_target->supports_multi_process ? \
    (*the_target->supports_multi_process) () : 0)
 
-#define target_process_qsupported(query)		\
+#define target_process_qsupported(features, count)	\
   do							\
     {							\
       if (the_target->process_qsupported)		\
-	the_target->process_qsupported (query);		\
+	the_target->process_qsupported (features, count); \
     } while (0)
 
 #define target_supports_tracepoints()			\
@@ -623,6 +639,11 @@ int kill_inferior (int);
   (the_target->stopped_by_hw_breakpoint ? \
    (*the_target->stopped_by_hw_breakpoint) () : 0)
 
+#define target_breakpoint_kind_from_pc(pcptr) \
+  (the_target->breakpoint_kind_from_pc \
+   ? (*the_target->breakpoint_kind_from_pc) (pcptr) \
+   : default_breakpoint_kind_from_pc (pcptr))
+
 /* Start non-stop mode, returns 0 on success, -1 on failure.   */
 
 int start_non_stop (int nonstop);
@@ -646,6 +667,10 @@ ptid_t mywait (ptid_t ptid, struct target_waitstatus *ourstatus, int options,
   (the_target->core_of_thread ? (*the_target->core_of_thread) (ptid) \
    : -1)
 
+#define target_thread_name(ptid)                                \
+  (the_target->thread_name ? (*the_target->thread_name) (ptid)  \
+   : NULL)
+
 int read_inferior_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len);
 
 int write_inferior_memory (CORE_ADDR memaddr, const unsigned char *myaddr,
@@ -656,5 +681,7 @@ int set_desired_thread (int id);
 const char *target_pid_to_str (ptid_t);
 
 int target_can_do_hardware_single_step (void);
+
+int default_breakpoint_kind_from_pc (CORE_ADDR *pcptr);
 
 #endif /* TARGET_H */

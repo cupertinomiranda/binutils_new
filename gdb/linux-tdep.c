@@ -37,6 +37,7 @@
 #include "infcall.h"
 #include "gdbcmd.h"
 #include "gdb_regex.h"
+#include "common/enum-flags.h"
 
 #include <ctype.h>
 
@@ -46,7 +47,7 @@
    Documentation/filesystems/proc.txt, inside the Linux kernel
    tree.  */
 
-enum filterflags
+enum filter_flag
   {
     COREFILTER_ANON_PRIVATE = 1 << 0,
     COREFILTER_ANON_SHARED = 1 << 1,
@@ -56,6 +57,7 @@ enum filterflags
     COREFILTER_HUGETLB_PRIVATE = 1 << 5,
     COREFILTER_HUGETLB_SHARED = 1 << 6,
   };
+DEF_ENUM_FLAGS_TYPE (enum filter_flag, filter_flags);
 
 /* This struct is used to map flags found in the "VmFlags:" field (in
    the /proc/<PID>/smaps file).  */
@@ -599,7 +601,7 @@ mapping_is_anonymous_p (const char *filename)
      This should work OK enough, however.  */
 
 static int
-dump_mapping_p (enum filterflags filterflags, const struct smaps_vmflags *v,
+dump_mapping_p (filter_flags filterflags, const struct smaps_vmflags *v,
 		int maybe_private_p, int mapping_anon_p, int mapping_file_p,
 		const char *filename)
 {
@@ -1120,10 +1122,10 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
   /* Default dump behavior of coredump_filter (0x33), according to
      Documentation/filesystems/proc.txt from the Linux kernel
      tree.  */
-  enum filterflags filterflags = (COREFILTER_ANON_PRIVATE
-				  | COREFILTER_ANON_SHARED
-				  | COREFILTER_ELF_HEADERS
-				  | COREFILTER_HUGETLB_PRIVATE);
+  filter_flags filterflags = (COREFILTER_ANON_PRIVATE
+			      | COREFILTER_ANON_SHARED
+			      | COREFILTER_ELF_HEADERS
+			      | COREFILTER_HUGETLB_PRIVATE);
 
   /* We need to know the real target PID to access /proc.  */
   if (current_inferior ()->fake_pid_p)
@@ -1139,7 +1141,10 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
 							coredumpfilter_name);
       if (coredumpfilterdata != NULL)
 	{
-	  sscanf (coredumpfilterdata, "%x", &filterflags);
+	  unsigned int flags;
+
+	  sscanf (coredumpfilterdata, "%x", &flags);
+	  filterflags = (enum filter_flag) flags;
 	  xfree (coredumpfilterdata);
 	}
     }
@@ -1340,18 +1345,6 @@ find_signalled_thread (struct thread_info *info, void *data)
     return 1;
 
   return 0;
-}
-
-static enum gdb_signal
-find_stop_signal (void)
-{
-  struct thread_info *info =
-    iterate_over_threads (find_signalled_thread, NULL);
-
-  if (info)
-    return info->suspend.stop_signal;
-  else
-    return GDB_SIGNAL_0;
 }
 
 /* Generate corefile notes for SPU contexts.  */
@@ -1656,62 +1649,49 @@ linux_get_siginfo_data (struct gdbarch *gdbarch, LONGEST *size)
 struct linux_corefile_thread_data
 {
   struct gdbarch *gdbarch;
-  int pid;
   bfd *obfd;
   char *note_data;
   int *note_size;
   enum gdb_signal stop_signal;
 };
 
-/* Called by gdbthread.c once per thread.  Records the thread's
-   register state for the corefile note section.  */
+/* Records the thread's register state for the corefile note
+   section.  */
 
-static int
-linux_corefile_thread_callback (struct thread_info *info, void *data)
+static void
+linux_corefile_thread (struct thread_info *info,
+		       struct linux_corefile_thread_data *args)
 {
-  struct linux_corefile_thread_data *args
-    = (struct linux_corefile_thread_data *) data;
+  struct cleanup *old_chain;
+  struct regcache *regcache;
+  gdb_byte *siginfo_data;
+  LONGEST siginfo_size = 0;
 
-  /* It can be current thread
-     which cannot be removed by update_thread_list.  */
-  if (info->state == THREAD_EXITED)
-    return 0;
+  regcache = get_thread_arch_regcache (info->ptid, args->gdbarch);
 
-  if (ptid_get_pid (info->ptid) == args->pid)
-    {
-      struct cleanup *old_chain;
-      struct regcache *regcache;
-      gdb_byte *siginfo_data;
-      LONGEST siginfo_size = 0;
+  old_chain = save_inferior_ptid ();
+  inferior_ptid = info->ptid;
+  target_fetch_registers (regcache, -1);
+  siginfo_data = linux_get_siginfo_data (args->gdbarch, &siginfo_size);
+  do_cleanups (old_chain);
 
-      regcache = get_thread_arch_regcache (info->ptid, args->gdbarch);
+  old_chain = make_cleanup (xfree, siginfo_data);
 
-      old_chain = save_inferior_ptid ();
-      inferior_ptid = info->ptid;
-      target_fetch_registers (regcache, -1);
-      siginfo_data = linux_get_siginfo_data (args->gdbarch, &siginfo_size);
-      do_cleanups (old_chain);
+  args->note_data = linux_collect_thread_registers
+    (regcache, info->ptid, args->obfd, args->note_data,
+     args->note_size, args->stop_signal);
 
-      old_chain = make_cleanup (xfree, siginfo_data);
+  /* Don't return anything if we got no register information above,
+     such a core file is useless.  */
+  if (args->note_data != NULL)
+    if (siginfo_data != NULL)
+      args->note_data = elfcore_write_note (args->obfd,
+					    args->note_data,
+					    args->note_size,
+					    "CORE", NT_SIGINFO,
+					    siginfo_data, siginfo_size);
 
-      args->note_data = linux_collect_thread_registers
-	(regcache, info->ptid, args->obfd, args->note_data,
-	 args->note_size, args->stop_signal);
-
-      /* Don't return anything if we got no register information above,
-         such a core file is useless.  */
-      if (args->note_data != NULL)
-	if (siginfo_data != NULL)
-	  args->note_data = elfcore_write_note (args->obfd,
-						args->note_data,
-						args->note_size,
-						"CORE", NT_SIGINFO,
-						siginfo_data, siginfo_size);
-
-      do_cleanups (old_chain);
-    }
-
-  return !args->note_data;
+  do_cleanups (old_chain);
 }
 
 /* Fill the PRPSINFO structure with information about the process being
@@ -1927,6 +1907,7 @@ linux_make_corefile_notes (struct gdbarch *gdbarch, bfd *obfd, int *note_size)
   char *note_data = NULL;
   gdb_byte *auxv;
   int auxv_len;
+  struct thread_info *curr_thr, *signalled_thr, *thr;
 
   if (! gdbarch_iterate_over_regset_sections_p (gdbarch))
     return NULL;
@@ -1963,13 +1944,37 @@ linux_make_corefile_notes (struct gdbarch *gdbarch, bfd *obfd, int *note_size)
     }
   END_CATCH
 
+  /* Like the kernel, prefer dumping the signalled thread first.
+     "First thread" is what tools use to infer the signalled thread.
+     In case there's more than one signalled thread, prefer the
+     current thread, if it is signalled.  */
+  curr_thr = inferior_thread ();
+  if (curr_thr->suspend.stop_signal != GDB_SIGNAL_0)
+    signalled_thr = curr_thr;
+  else
+    {
+      signalled_thr = iterate_over_threads (find_signalled_thread, NULL);
+      if (signalled_thr == NULL)
+	signalled_thr = curr_thr;
+    }
+
   thread_args.gdbarch = gdbarch;
-  thread_args.pid = ptid_get_pid (inferior_ptid);
   thread_args.obfd = obfd;
   thread_args.note_data = note_data;
   thread_args.note_size = note_size;
-  thread_args.stop_signal = find_stop_signal ();
-  iterate_over_threads (linux_corefile_thread_callback, &thread_args);
+  thread_args.stop_signal = signalled_thr->suspend.stop_signal;
+
+  linux_corefile_thread (signalled_thr, &thread_args);
+  ALL_NON_EXITED_THREADS (thr)
+    {
+      if (thr == signalled_thr)
+	continue;
+      if (ptid_get_pid (thr->ptid) != ptid_get_pid (inferior_ptid))
+	continue;
+
+      linux_corefile_thread (thr, &thread_args);
+    }
+
   note_data = thread_args.note_data;
   if (!note_data)
     return NULL;

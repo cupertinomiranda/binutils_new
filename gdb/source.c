@@ -42,6 +42,7 @@
 #include "completer.h"
 #include "ui-out.h"
 #include "readline/readline.h"
+#include "common/enum-flags.h"
 
 #define OPEN_MODE (O_RDONLY | O_BINARY)
 #define FDOPEN_MODE FOPEN_RB
@@ -746,6 +747,9 @@ openp (const char *path, int opts, const char *string,
   struct cleanup *back_to;
   int ix;
   char *dir;
+  /* The errno set for the last name we tried to open (and
+     failed).  */
+  int last_errno = 0;
 
   /* The open syscall MODE parameter is not specified.  */
   gdb_assert ((mode & O_CREAT) == 0);
@@ -786,6 +790,7 @@ openp (const char *path, int opts, const char *string,
 	  filename = NULL;
 	  fd = -1;
 	}
+      last_errno = errno;
 
       if (!(opts & OPF_SEARCH_IN_PATH))
 	for (i = 0; string[i]; i++)
@@ -808,6 +813,7 @@ openp (const char *path, int opts, const char *string,
   alloclen = strlen (path) + strlen (string) + 2;
   filename = (char *) alloca (alloclen);
   fd = -1;
+  last_errno = ENOENT;
 
   dir_vec = dirnames_to_char_ptr_vec (path);
   back_to = make_cleanup_free_char_ptr_vec (dir_vec);
@@ -878,6 +884,7 @@ openp (const char *path, int opts, const char *string,
 	  fd = gdb_open_cloexec (filename, mode, 0);
 	  if (fd >= 0)
 	    break;
+	  last_errno = errno;
 	}
     }
 
@@ -895,6 +902,7 @@ done:
 	*filename_opened = gdb_abspath (filename);
     }
 
+  errno = last_errno;
   return fd;
 }
 
@@ -1320,7 +1328,7 @@ identify_source_line (struct symtab *s, int line, int mid_statement,
 
 static void
 print_source_lines_base (struct symtab *s, int line, int stopline,
-			 enum print_source_lines_flags flags)
+			 print_source_lines_flags flags)
 {
   int c;
   int desc;
@@ -1354,7 +1362,7 @@ print_source_lines_base (struct symtab *s, int line, int stopline,
   else
     {
       desc = last_source_error;
-	  flags |= PRINT_SOURCE_LINES_NOERROR;
+      flags |= PRINT_SOURCE_LINES_NOERROR;
       noprint = 1;
     }
 
@@ -1480,7 +1488,7 @@ print_source_lines_base (struct symtab *s, int line, int stopline,
 
 void
 print_source_lines (struct symtab *s, int line, int stopline,
-		    enum print_source_lines_flags flags)
+		    print_source_lines_flags flags)
 {
   print_source_lines_base (s, line, stopline, flags);
 }

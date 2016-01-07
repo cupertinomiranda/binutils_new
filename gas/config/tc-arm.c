@@ -266,7 +266,7 @@ static int mfloat_abi_opt = -1;
 /* Record user cpu selection for object attributes.  */
 static arm_feature_set selected_cpu = ARM_ARCH_NONE;
 /* Must be long enough to hold any of the names in arm_cpus.  */
-static char selected_cpu_name[16];
+static char selected_cpu_name[20];
 
 extern FLONUM_TYPE generic_floating_point_number;
 
@@ -7839,7 +7839,8 @@ move_or_literal_pool (int i, enum lit_type t, bfd_boolean mode_3)
 	{
 	  if (thumb_p)
 	    {
-	      if ((v & ~0xFF) == 0)
+	      /* This can be encoded only for a low register.  */
+	      if ((v & ~0xFF) == 0 && (inst.operands[i].reg < 8))
 		{
 		  /* This can be done with a mov(1) instruction.  */
 		  inst.instruction = T_OPCODE_MOV_I8 | (inst.operands[i].reg << 8);
@@ -7847,10 +7848,10 @@ move_or_literal_pool (int i, enum lit_type t, bfd_boolean mode_3)
 		  return TRUE;
 		}
 
-	      if (ARM_CPU_HAS_FEATURE (cpu_variant, arm_arch_t2)
-		  && ARM_CPU_HAS_FEATURE (cpu_variant, arm_ext_v6t2))
+	      if (ARM_CPU_HAS_FEATURE (cpu_variant, arm_arch_t2))
 		{
-		  /* Check if on thumb2 it can be done with a mov.w or mvn.w instruction.  */
+		  /* Check if on thumb2 it can be done with a mov.w or mvn.w
+		     instruction.  */
 		  unsigned int newimm;
 		  bfd_boolean isNegated;
 
@@ -7859,36 +7860,27 @@ move_or_literal_pool (int i, enum lit_type t, bfd_boolean mode_3)
 		    isNegated = FALSE;
 		  else
 		    {
-		      newimm = encode_thumb32_immediate (~ v);
+		      newimm = encode_thumb32_immediate (~v);
 		      if (newimm != (unsigned int) FAIL)
 			isNegated = TRUE;
 		    }
 
 		  if (newimm != (unsigned int) FAIL)
 		    {
-		      inst.instruction = 0xf04f0000 | (inst.operands[i].reg << 8);
-		      inst.instruction |= (isNegated?0x200000:0);
+		      inst.instruction = (0xf04f0000
+					  | (inst.operands[i].reg << 8));
+		      inst.instruction |= (isNegated ? 0x200000 : 0);
 		      inst.instruction |= (newimm & 0x800) << 15;
 		      inst.instruction |= (newimm & 0x700) << 4;
 		      inst.instruction |= (newimm & 0x0ff);
 		      return TRUE;
 		    }
-		  else if ((v & ~0xFFFF) == 0 || (v & ~0xFFFF0000) == 0)
+		  else if ((v & ~0xFFFF) == 0)
 		    {
-		      /* The number may be loaded with a movw/movt instruction.  */
-		      int imm;
+		      /* The number can be loaded with a mov.w instruction.  */
+		      int imm = v & 0xFFFF;
 
-		      if ((inst.reloc.exp.X_add_number & ~0xFFFF) == 0)
-			{
-			  inst.instruction= 0xf2400000;
-			  imm = v;
-			}
-		      else
-			{
-			  inst.instruction = 0xf2c00000;
-			  imm = v >> 16;
-			}
-
+		      inst.instruction = 0xf2400000;  /* MOVW.  */
 		      inst.instruction |= (inst.operands[i].reg << 8);
 		      inst.instruction |= (imm & 0xf000) << 4;
 		      inst.instruction |= (imm & 0x0800) << 15;
@@ -18892,11 +18884,11 @@ static const struct asm_opcode insns[] =
   UF(srsed,	8400500,	   2, (oRRw, I31w),		   srs),
  TUF("srsdb",	9400500, e800c000, 2, (oRRw, I31w),		   srs,  srs),
  TUF("srsfd",	9400500, e800c000, 2, (oRRw, I31w),		   srs,  srs),
+ TUF("cps",	1020000, f3af8100, 1, (I31b),			  imm0, t_cps),
 
 /*  ARM V6 not included in V7M (eg. integer SIMD).  */
 #undef  THUMB_VARIANT
 #define THUMB_VARIANT  & arm_ext_v6_dsp
- TUF("cps",	1020000, f3af8100, 1, (I31b),			  imm0, t_cps),
  TCE("pkhbt",	6800010, eac00000, 4, (RRnpc, RRnpc, RRnpc, oSHll),   pkhbt, t_pkhbt),
  TCE("pkhtb",	6800050, eac00020, 4, (RRnpc, RRnpc, RRnpc, oSHar),   pkhtb, t_pkhtb),
  TCE("qadd16",	6200f10, fa90f010, 3, (RRnpc, RRnpc, RRnpc),	   rd_rn_rm, t_simd),
@@ -21019,7 +21011,7 @@ md_section_align (segT	 segment ATTRIBUTE_UNUSED,
       int align;
 
       align = bfd_get_section_alignment (stdoutput, segment);
-      size = ((size + (1 << align) - 1) & ((valueT) -1 << align));
+      size = ((size + (1 << align) - 1) & (-((valueT) 1 << align)));
     }
 #endif
 
@@ -24720,6 +24712,8 @@ static const struct arm_cpu_option_table arm_cpus[] =
 								  "Cortex-A15"),
   ARM_CPU_OPT ("cortex-a17",	ARM_ARCH_V7VE,   FPU_ARCH_NEON_VFP_V4,
 								  "Cortex-A17"),
+  ARM_CPU_OPT ("cortex-a35",    ARM_ARCH_V8A,    FPU_ARCH_CRYPTO_NEON_VFP_ARMV8,
+								  "Cortex-A35"),
   ARM_CPU_OPT ("cortex-a53",    ARM_ARCH_V8A,    FPU_ARCH_CRYPTO_NEON_VFP_ARMV8,
 								  "Cortex-A53"),
   ARM_CPU_OPT ("cortex-a57",    ARM_ARCH_V8A,    FPU_ARCH_CRYPTO_NEON_VFP_ARMV8,
@@ -24743,6 +24737,10 @@ static const struct arm_cpu_option_table arm_cpus[] =
   ARM_CPU_OPT ("exynos-m1",	ARM_ARCH_V8A,	 FPU_ARCH_CRYPTO_NEON_VFP_ARMV8,
 								  "Samsung " \
 								  "Exynos M1"),
+  ARM_CPU_OPT ("qdf24xx",	ARM_ARCH_V8A,	 FPU_ARCH_CRYPTO_NEON_VFP_ARMV8,
+								  "Qualcomm "
+								  "QDF24XX"),
+
   /* ??? XSCALE is really an architecture.  */
   ARM_CPU_OPT ("xscale",	ARM_ARCH_XSCALE, FPU_ARCH_VFP_V2, NULL),
   /* ??? iwmmxt is not a processor.  */
@@ -24829,6 +24827,7 @@ static const struct arm_arch_option_table arm_archs[] =
   ARM_ARCH_OPT ("armv7e-m",	ARM_ARCH_V7EM,	 FPU_ARCH_VFP),
   ARM_ARCH_OPT ("armv8-a",	ARM_ARCH_V8A,	 FPU_ARCH_VFP),
   ARM_ARCH_OPT ("armv8.1-a",	ARM_ARCH_V8_1A,	 FPU_ARCH_VFP),
+  ARM_ARCH_OPT ("armv8.2-a",	ARM_ARCH_V8_2A,	 FPU_ARCH_VFP),
   ARM_ARCH_OPT ("xscale",	ARM_ARCH_XSCALE, FPU_ARCH_VFP),
   ARM_ARCH_OPT ("iwmmxt",	ARM_ARCH_IWMMXT, FPU_ARCH_VFP),
   ARM_ARCH_OPT ("iwmmxt2",	ARM_ARCH_IWMMXT2,FPU_ARCH_VFP),
@@ -25132,10 +25131,16 @@ arm_parse_cpu (char *str)
 	mcpu_cpu_opt = &opt->value;
 	mcpu_fpu_opt = &opt->default_fpu;
 	if (opt->canonical_name)
-	  strcpy (selected_cpu_name, opt->canonical_name);
+	  {
+	    gas_assert (sizeof selected_cpu_name > strlen (opt->canonical_name));
+	    strcpy (selected_cpu_name, opt->canonical_name);
+	  }
 	else
 	  {
 	    size_t i;
+
+	    if (len >= sizeof selected_cpu_name)
+	      len = (sizeof selected_cpu_name) - 1;
 
 	    for (i = 0; i < len; i++)
 	      selected_cpu_name[i] = TOUPPER (opt->name[i]);

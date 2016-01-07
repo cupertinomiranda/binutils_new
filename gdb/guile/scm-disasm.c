@@ -76,7 +76,7 @@ dascm_make_insn (CORE_ADDR pc, const char *assembly, int insn_len)
    Scheme port.  Called via gdbscm_call_guile.
    The result is a statically allocated error message or NULL if success.  */
 
-static void *
+static const char *
 gdbscm_disasm_read_memory_worker (void *datap)
 {
   struct gdbscm_disasm_read_data *data
@@ -109,7 +109,7 @@ gdbscm_disasm_read_memory (bfd_vma memaddr, bfd_byte *myaddr,
 			   struct disassemble_info *dinfo)
 {
   struct gdbscm_disasm_read_data data;
-  void *status;
+  const char *status;
 
   data.memaddr = memaddr;
   data.myaddr = myaddr;
@@ -119,9 +119,8 @@ gdbscm_disasm_read_memory (bfd_vma memaddr, bfd_byte *myaddr,
   status = gdbscm_with_guile (gdbscm_disasm_read_memory_worker, &data);
 
   /* TODO: IWBN to distinguish problems reading target memory versus problems
-     with the port (e.g., EOF).
-     We return TARGET_XFER_E_IO here as that's what memory_error looks for.  */
-  return status != NULL ? TARGET_XFER_E_IO : 0;
+     with the port (e.g., EOF).  */
+  return status != NULL ? -1 : 0;
 }
 
 /* disassemble_info.memory_error_func for gdbscm_print_insn_from_port.
@@ -133,7 +132,7 @@ static void
 gdbscm_disasm_memory_error (int status, bfd_vma memaddr,
 			    struct disassemble_info *info)
 {
-  memory_error (status, memaddr);
+  memory_error (TARGET_XFER_E_IO, memaddr);
 }
 
 /* disassemble_info.print_address_func for gdbscm_print_insn_from_port.

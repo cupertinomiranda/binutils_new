@@ -4602,7 +4602,7 @@ parse_bitfield_cons (exp, nbytes)
 	      return;
 	    }			/* Too complex.  */
 
-	  value |= ((~(-1 << width) & exp->X_add_number)
+	  value |= ((~(-(1 << width)) & exp->X_add_number)
 		    << ((BITS_PER_CHAR * nbytes) - bits_available));
 
 	  if ((bits_available -= width) == 0
@@ -5150,7 +5150,7 @@ output_big_leb128 (char *p, LITTLENUM_TYPE *bignum, int size, int sign)
 }
 
 /* Generate the appropriate fragments for a given expression to emit a
-   leb128 value.  */
+   leb128 value.  SIGN is 1 for sleb, 0 for uleb.  */
 
 static void
 emit_leb128_expr (expressionS *exp, int sign)

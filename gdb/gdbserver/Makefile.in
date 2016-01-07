@@ -180,7 +180,8 @@ SFILES=	$(srcdir)/gdbreplay.c $(srcdir)/inferiors.c $(srcdir)/dll.c \
 	$(srcdir)/common/common-debug.c $(srcdir)/common/cleanups.c \
 	$(srcdir)/common/common-exceptions.c $(srcdir)/symbol.c \
 	$(srcdir)/common/btrace-common.c \
-	$(srcdir)/common/fileio.c $(srcdir)/nat/linux-namespaces.c
+	$(srcdir)/common/fileio.c $(srcdir)/nat/linux-namespaces.c \
+	$(srcdir)/arch/arm.c
 
 DEPFILES = @GDBSERVER_DEPFILES@
 
@@ -583,6 +584,12 @@ fileio.o: ../common/fileio.c
 	$(COMPILE) $<
 	$(POSTCOMPILE)
 
+# Arch object files rules form ../arch
+
+arm.o: ../arch/arm.c
+	$(COMPILE) $<
+	$(POSTCOMPILE)
+
 # Native object files rules from ../nat
 
 x86-dregs.o: ../nat/x86-dregs.c
@@ -828,7 +835,7 @@ reg-tilegx32.c : $(srcdir)/../regformats/reg-tilegx32.dat $(regdat_sh)
 
 # A list of all the objects we might care about in this build, for
 # dependency tracking.
-all_object_files = $(OBS) $(GDBREPLAY_OBS)
+all_object_files = $(OBS) $(GDBREPLAY_OBS) $(IPA_OBJS)
 
 # Ensure that generated files are created early.  Use order-only
 # dependencies if available.  They require GNU make 3.80 or newer,

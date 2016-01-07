@@ -3338,10 +3338,13 @@ class Target_aarch64 : public Sized_target<size, big_endian>
 	     unsigned int shndx, Output_section* output_section,
 	     Symbol* sym, const elfcpp::Rela<size, big_endian>& reloc)
   {
+    unsigned int r_type = elfcpp::elf_r_type<size>(reloc.get_r_info());
     this->copy_relocs_.copy_reloc(symtab, layout,
 				  symtab->get_sized_symbol<size>(sym),
 				  object, shndx, output_section,
-				  reloc, this->rela_dyn_section(layout));
+				  r_type, reloc.get_r_offset(),
+				  reloc.get_r_addend(),
+				  this->rela_dyn_section(layout));
   }
 
   // Information about this specific target which we pass to the
@@ -3434,7 +3437,8 @@ const Target::Target_info Target_aarch64<64, false>::aarch64_info =
   0,			// large_common_section_flags
   NULL,			// attributes_section
   NULL,			// attributes_vendor
-  "_start"		// entry_symbol_name
+  "_start",		// entry_symbol_name
+  32,			// hash_entry_size
 };
 
 template<>
@@ -3461,7 +3465,8 @@ const Target::Target_info Target_aarch64<32, false>::aarch64_info =
   0,			// large_common_section_flags
   NULL,			// attributes_section
   NULL,			// attributes_vendor
-  "_start"		// entry_symbol_name
+  "_start",		// entry_symbol_name
+  32,			// hash_entry_size
 };
 
 template<>
@@ -3488,7 +3493,8 @@ const Target::Target_info Target_aarch64<64, true>::aarch64_info =
   0,			// large_common_section_flags
   NULL,			// attributes_section
   NULL,			// attributes_vendor
-  "_start"		// entry_symbol_name
+  "_start",		// entry_symbol_name
+  32,			// hash_entry_size
 };
 
 template<>
@@ -3515,7 +3521,8 @@ const Target::Target_info Target_aarch64<32, true>::aarch64_info =
   0,			// large_common_section_flags
   NULL,			// attributes_section
   NULL,			// attributes_vendor
-  "_start"		// entry_symbol_name
+  "_start",		// entry_symbol_name
+  32,			// hash_entry_size
 };
 
 // Get the GOT section, creating it if necessary.
@@ -5987,6 +5994,29 @@ Target_aarch64<size, big_endian>::Scan::local(
     case elfcpp::R_AARCH64_PREL16:
       break;
 
+    case elfcpp::R_AARCH64_ADR_GOT_PAGE:
+    case elfcpp::R_AARCH64_LD64_GOT_LO12_NC:
+      // This pair of relocations is used to access a specific GOT entry.
+      {
+	bool is_new = false;
+	// This symbol requires a GOT entry.
+	if (is_ifunc)
+	  is_new = got->add_local_plt(object, r_sym, GOT_TYPE_STANDARD);
+	else
+	  is_new = got->add_local(object, r_sym, GOT_TYPE_STANDARD);
+	if (is_new && parameters->options().output_is_position_independent())
+	  target->rela_dyn_section(layout)->
+	    add_local_relative(object,
+			       r_sym,
+			       elfcpp::R_AARCH64_RELATIVE,
+			       got,
+			       object->local_got_offset(r_sym,
+							GOT_TYPE_STANDARD),
+			       0,
+			       false);
+      }
+      break;
+
     case elfcpp::R_AARCH64_LD_PREL_LO19:        // 273
     case elfcpp::R_AARCH64_ADR_PREL_LO21:       // 274
     case elfcpp::R_AARCH64_ADR_PREL_PG_HI21:    // 275
@@ -6884,16 +6914,41 @@ Target_aarch64<size, big_endian>::Relocate::relocate(
       break;
 
     case elfcpp::R_AARCH64_ABS64:
+      if (!parameters->options().apply_dynamic_relocs()
+          && parameters->options().output_is_position_independent()
+          && gsym != NULL
+          && gsym->needs_dynamic_reloc(reloc_property->reference_flags())
+          && !gsym->can_use_relative_reloc(false))
+        // We have generated an absolute dynamic relocation, so do not
+        // apply the relocation statically. (Works around bugs in older
+        // Android dynamic linkers.)
+        break;
       reloc_status = Reloc::template rela_ua<64>(
 	view, object, psymval, addend, reloc_property);
       break;
 
     case elfcpp::R_AARCH64_ABS32:
+      if (!parameters->options().apply_dynamic_relocs()
+          && parameters->options().output_is_position_independent()
+          && gsym != NULL
+          && gsym->needs_dynamic_reloc(reloc_property->reference_flags()))
+        // We have generated an absolute dynamic relocation, so do not
+        // apply the relocation statically. (Works around bugs in older
+        // Android dynamic linkers.)
+        break;
       reloc_status = Reloc::template rela_ua<32>(
 	view, object, psymval, addend, reloc_property);
       break;
 
     case elfcpp::R_AARCH64_ABS16:
+      if (!parameters->options().apply_dynamic_relocs()
+          && parameters->options().output_is_position_independent()
+          && gsym != NULL
+          && gsym->needs_dynamic_reloc(reloc_property->reference_flags()))
+        // We have generated an absolute dynamic relocation, so do not
+        // apply the relocation statically. (Works around bugs in older
+        // Android dynamic linkers.)
+        break;
       reloc_status = Reloc::template rela_ua<16>(
 	view, object, psymval, addend, reloc_property);
       break;

@@ -1,3 +1,165 @@
+2015-11-20  Maciej W. Rozycki  <macro@imgtec.com>
+
+	* configure.tgt <mips*el-mti-elf*, mips*el-img-elf*>: Add
+	targets.
+
+2015-11-19  Alan Modra  <amodra@gmail.com>
+
+	PR ld/19264
+	* ldlang.c (lang_size_sections): Don't ignore .tbss when
+	adjusting start of relro region.
+
+2015-11-16  Nick Clifton  <nickc@redhat.com>
+
+	PR ld/19106
+	* emultempl/armelf.em (_set_symbols): New function.  Enables
+	relaxation for non-relocatable links.
+	(LDEMUL_SET_SYMBOLS): Define.
+
+2015-11-13  Tristan Gingold  <gingold@adacore.com>
+
+	* configure: Regenerate.
+
+2015-11-13  Tristan Gingold  <gingold@adacore.com>
+
+	* NEWS: Add marker for 2.26.
+
+2015-11-05  Alan Modra  <amodra@gmail.com>
+
+	* Makefile.in: Regenerate.
+
+2015-11-05  Alan Modra  <amodra@gmail.com>
+
+	PR ld/19203
+	* ld.texinfo (DATA_SEGMENT_ALIGN): Correct second expression.
+
+2015-10-30  Nick Clifton  <nickc@redhat.com>
+
+	* po/zh_CN.po: Updated (simplified) Chinese translation.
+
+2015-10-29  Ed Schouten  <ed@nuxi.nl>
+
+	* Makefile.am (ALL_64_EMULATION_SOURCES): Add support for
+	CloudABI on aarch64. For this target we have to make sure we use
+	ELFOSABI_CLOUDABI instead of ELFOSABI_NONE.
+	* configure.tgt (targ_emul): Likewise.
+	* emulparams/aarch64cloudabi.sh: New file.
+	* emulparams/aarch64cloudabib.sh: New file.
+	* Makefile.in: Regenerate.
+
+2015-10-29  Nick Clifton  <nickc@redhat.com>
+
+	PR ld/19146
+	* lexsup.c (parse_args): Correct error message for an option that
+	is missing its argument if that option is the last one on the
+	command line.
+
+2015-10-29  Alan Modra  <amodra@gmail.com>
+
+	PR ld/19162
+	* emultempl/elf32.em (gld${EMULATION_NAME}_place_orphan): Pass
+	updated flags to lang_output_section_find_by_flags.
+	* emultempl/mmo.em (mmo_place_orphan): Merge flags for any
+	other input sections that might match a new output section to
+	decide placement.
+	* emultempl/pe.em (gld_${EMULATION_NAME}_place_orphan): Likewise.
+	* emultempl/pep.em (gld_${EMULATION_NAME}_place_orphan): Likewise.
+	* ldlang.c (lang_output_section_find_by_flags): Add sec_flags param.
+	* ldlang.h (lang_output_section_find_by_flags): Update prototype.
+
+2015-10-29  Matthias Klose  <doko@ubuntu.com>
+
+	* ld.texinfo (Options <-rpath>): Fix typo.
+
+2015-10-28  Alan Modra  <amodra@gmail.com>
+
+	PR ld/19162
+	* emultempl/elf32.em (gld${EMULATION_NAME}_place_orphan): Check flags
+	before calling _bfd_elf_match_sections_by_type.  Merge flags for
+	any other input sections that might match a new output section to
+	decide placement.
+
+2015-10-27  Laurent Alfonsi <laurent.alfonsi@st.com>
+            Christophe Monat <christophe.monat@st.com>
+
+	* ld.texinfo: Add description of the STM32L4xx erratum
+	workaround.
+	* NEWS: Mention the new feature.
+	* emultempl/armelf.em (stm32l4xx_fix): New.
+	(arm_elf_before_allocation): Choose the type of fix, scan for
+	erratum.
+	(gld${EMULATION_NAME}_finish): Fix veneer locations.
+	(arm_elf_create_output_section_statements): Propagate
+	stm32l4xx_fix value.
+	(PARSE_AND_LIST_PROLOGUE): Define OPTION_STM32L4XX_FIX.
+	(PARSE_AND_LIST_LONGOPTS): Add entry for handling
+	--fix-stm32l4xx-629360.
+	(PARSE_AND_LIST_OPTION): Add entry for helping on
+	--fix-stm32l4xx-629360.
+	(PARSE_AND_LIST_ARGS_CASES): Treat OPTION_STM32L4XX_FIX.
+
+2015-10-27  Alan Modra  <amodra@gmail.com>
+
+	PR ld/19175
+	* ldlang.c (lang_insert_orphan): Evaluate __start_* and __stop_*
+	symbol PROVIDE expressions.
+	* ldexp.c (exp_fold_tree_1 <etree_provide>): Define undefweak
+	references.
+
+2015-10-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* configure.ac: Properly check
+	--enable-compressed-debug-sections={yes,all}.
+	* configure: Regenerated.
+
+2015-10-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/19109
+	* configure.ac: Handle --enable-compressed-debug-sections=*,ld,*.
+	* configure: Regenerated.
+
+2015-10-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ld/ld.texinfo: Document "-z call-nop=PADDING" option.
+	* emulparams/call_nop.sh: New file.
+	* emulparams/elf_i386_be.sh: Source
+	${srcdir}/emulparams/call_nop.sh.
+	* emulparams/elf_i386_chaos.sh: Likewise.
+	* emulparams/elf_i386_ldso.sh: Likewise.
+	* emulparams/elf_i386_vxworks.sh: Likewise.
+	* emulparams/elf_iamcu.sh: Likewise.
+	* emulparams/elf_k1om.sh: Likewise.
+	* emulparams/elf_l1om.sh: Likewise.
+	* emulparams/elf_x86_64.sh: Likewise.
+	* emultempl/elf32.em (gld${EMULATION_NAME}_before_parse): Set
+	link_info.call_nop_byte if $CALL_NOP_BYTE isn't empty.
+
+2015-10-21  Nick Clifton  <nickc@redhat.com>
+
+	PR gas/19109
+	* configure.ac: Add --enable-compressed-debug-sections with
+	options of all, none or ld.
+	* configure: Regenerate.
+	* config.in: Regenerate.
+	* ld.texinfo: Document how to determine the default action for
+	debug sections.
+	* ldmain.c (main): If DEFAULT_FLAG_COMPRESS_DEBUG is defined then
+	set the compress_debug field of the link_info structure to
+	zlib-gabi.
+	* lexsup.c (elf_static_list_options): Output the default setting
+	for the --compress-debug-sections option.
+	* NEWS: Mention the new configure option.
+
+2015-10-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ld.texinfo: Fix a typo for "-z noextern-protected-data".
+
+2015-10-15  Simon Dardis  <Simon.Dardis@imgtec.com>
+
+	* ld/ldexp.c: (try_copy_symbol_flags): New. Factored out from...
+	(exp_fold_tree_1): Here.  Cope with ternary operator in
+	assignments.  Use new helper.
+
 2015-10-14  Nick Clifton  <nickc@redhat.com>
 
 	* po/zh_TW.po: Updated Chinese translation.

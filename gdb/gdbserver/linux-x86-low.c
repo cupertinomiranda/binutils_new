@@ -463,7 +463,7 @@ static struct regset_info x86_regsets[] =
     FP_REGS,
     x86_fill_fpregset, x86_store_fpregset },
 #endif /* HAVE_PTRACE_GETREGS */
-  { 0, 0, 0, -1, -1, NULL, NULL }
+  NULL_REGSET
 };
 
 static CORE_ADDR
@@ -502,7 +502,7 @@ x86_set_pc (struct regcache *regcache, CORE_ADDR pc)
     }
 }
 
-static const unsigned char x86_breakpoint[] = { 0xCC };
+static const gdb_byte x86_breakpoint[] = { 0xCC };
 #define x86_breakpoint_len 1
 
 static int
@@ -1356,29 +1356,35 @@ x86_linux_update_xmltarget (void)
    PTRACE_GETREGSET.  */
 
 static void
-x86_linux_process_qsupported (const char *query)
+x86_linux_process_qsupported (char **features, int count)
 {
+  int i;
+
   /* Return if gdb doesn't support XML.  If gdb sends "xmlRegisters="
      with "i386" in qSupported query, it supports x86 XML target
      descriptions.  */
   use_xml = 0;
-  if (query != NULL && startswith (query, "xmlRegisters="))
+  for (i = 0; i < count; i++)
     {
-      char *copy = xstrdup (query + 13);
-      char *p;
+      const char *feature = features[i];
 
-      for (p = strtok (copy, ","); p != NULL; p = strtok (NULL, ","))
+      if (startswith (feature, "xmlRegisters="))
 	{
-	  if (strcmp (p, "i386") == 0)
+	  char *copy = xstrdup (feature + 13);
+	  char *p;
+
+	  for (p = strtok (copy, ","); p != NULL; p = strtok (NULL, ","))
 	    {
-	      use_xml = 1;
-	      break;
+	      if (strcmp (p, "i386") == 0)
+		{
+		  use_xml = 1;
+		  break;
+		}
 	    }
-	} 
 
-      free (copy);
+	  free (copy);
+	}
     }
-
   x86_linux_update_xmltarget ();
 }
 
@@ -3243,6 +3249,15 @@ x86_emit_ops (void)
     return &i386_emit_ops;
 }
 
+/* Implementation of linux_target_ops method "sw_breakpoint_from_kind".  */
+
+static const gdb_byte *
+x86_sw_breakpoint_from_kind (int kind, int *size)
+{
+  *size = x86_breakpoint_len;
+  return x86_breakpoint;
+}
+
 static int
 x86_supports_range_stepping (void)
 {
@@ -3261,8 +3276,8 @@ struct linux_target_ops the_low_target =
   NULL, /* fetch_register */
   x86_get_pc,
   x86_set_pc,
-  x86_breakpoint,
-  x86_breakpoint_len,
+  NULL, /* breakpoint_kind_from_pc */
+  x86_sw_breakpoint_from_kind,
   NULL,
   1,
   x86_breakpoint_at,

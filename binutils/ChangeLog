@@ -1,3 +1,84 @@
+2015-11-28  Cary Coutant  <ccoutant@gmail.com>
+
+	* MAINTAINERS: Update my email address.
+
+2015-11-20  Ronald Hoogenboom  <hoogenboom30@zonnet.nl>
+
+	* objcopy.c (parse_symflags): Use xstrndup in place of strndup.
+	(copy_main): Likewise.
+
+2015-11-20  Nick Clifton  <nickc@redhat.com>
+
+	* po/ca.po: New Catalan translation.
+	* configure.ac (ALL_LINGUAS): Add ca.
+	* configure: Regenerate.
+
+2015-11-18  Tristan Gingold  <gingold@adacore.com>
+
+	* od-macho.c (bfd_mach_o_load_command_name): Add new
+	entries.
+	(dump_unwind_encoding_arm64): New function.
+	(dump_unwind_encoding): Handle arm64.
+
+2015-11-13  Tristan Gingold  <gingold@adacore.com>
+
+	* configure: Regenerate.
+
+2015-11-13  Tristan Gingold  <gingold@adacore.com>
+
+	* NEWS: Add marker for 2.26.
+
+2015-11-09  Dominik Vogt  <vogt@linux.vnet.ibm.com>
+
+	* dwarf.c (read_leb128): Fix left shift of negative value.
+
+2015-11-03  Alan Modra  <amodra@gmail.com>
+
+	* readelf (process_version_sections): Check DT_VERNEED and
+	DT_VERDEF for all symbols.  Report "*both*" should a symbol
+	have both a verneed and verdef.
+	(get_symbol_version_string): Reduce indentation by early
+	exits.  Don't use SHT_NOBITS heuristic to detect case where a
+	defined symbol has a verneed entry.
+
+2015-10-30  Nick Clifton  <nickc@redhat.com>
+
+	* po/zh_CN.po: Updated (simplified) Chinese translation.
+
+2015-10-27  Stephen Fisher  <sfisher@panix.com>
+
+	* binutils.c (process_netbsd_elf_note): New function.
+	(process_note): Call the new function for NetBSD core notes.
+
+2015-10-22  Hans-Peter Nilsson  <hp@bitrange.com>
+
+	* objcopy.c (setup_section): Don't omit bfd_copy_private_bfd_data
+	call when extract_symbol.
+
+2015-10-21  Ronald Hoogenboom  <rhoogenboom@irdeto.com>
+
+	PR binutils/19104
+	* objcopy.c (command_line_switch): Add OPTION_ADD_SYMBOL.
+	(copy_options): Add add-symbol.
+	(copy_usage): Likewise.
+	(parse_symflags): New function.
+	(need_sym_before): New function.
+	(create_new_symbol): New function.
+	(filter_symbols): Add code to insert new symbols.
+	(copy_main): Process OPTION_ADD_SYMBOL.
+	* doc/binutils.texi: Document new feature.
+	* NEWS: Add note about the new feature.
+
+2015-10-18  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	PR binutils/19147
+	* readelf.c (print_core_note): Fix off-by-one bug.
+
+2015-10-15  Alan Modra  <amodra@gmail.com>
+
+	* objcopy.c (copy_object): Don't omit bfd_copy_private_bfd_data
+	call when extract_symbol.
+
 2015-10-12  Andrew Burgess  <andrew.burgess@embecosm.com>
 
 	* od-elf32_avr.c (elf32_avr_dump_avr_prop): Fix printing of align

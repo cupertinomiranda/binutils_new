@@ -1,3 +1,428 @@
+2015-11-26  Daniel Colascione  <dancol@dancol.org>
+2015-11-26  Simon Marchi  <simon.marchi@ericsson.com>
+
+	* linux-low.c (linux_target_ops): Use linux_proc_tid_get_name.
+	* server.c (handle_qxfer_threads_worker): Refactor to include thread
+	name in reply.
+	* target.h (struct target_ops) <thread_name>: New field.
+	(target_thread_name): New macro.
+
+2015-11-23  Joel Brobecker  <brobecker@adacore.com>
+
+	* regcache.h (regcache_invalidate_pid): Add declaration.
+	* regcache.c (regcache_invalidate_pid): New function, extracted
+	from regcache_invalidate.
+	(regcache_invalidate): Reimplement using regcache_invalidate_pid.
+	Add trivial documentation comment.
+	* lynx-low.c: Use regcache_invalidate_pid instead of
+	regcache_invalidate.
+
+2015-11-23  Joel Brobecker  <brobecker@adacore.com>
+
+	* configure.ac: Do not call AC_CHECK_TYPES for Elf32_auxv_t
+	and Elf64_auxv_t if the target is Android.
+
+2015-11-22  Doug Evans  <xdje42@gmail.com>
+
+	* target.h: #include <sys/types.h>.
+
+2015-11-19  Pedro Alves  <palves@redhat.com>
+
+	* linux-low.c (linux_process_qsupported): Change prototype.
+	Adjust.
+	* linux-low.h (struct linux_target_ops) <process_qsupported>:
+	Change prototype.
+	* linux-x86-low.c (x86_linux_process_qsupported): Change prototype
+	and adjust to loop over all features.
+	* server.c (handle_query) <qSupported>: Adjust to call
+	target_process_qsupported once, passing it a vector of unprocessed
+	features.
+	* target.h (struct target_ops) <process_qsupported>: Change
+	prototype.
+	(target_process_qsupported): Adjust.
+
+2015-11-19  Pedro Alves  <palves@redhat.com>
+
+	* configure.ac (ERROR_ON_WARNING): Don't check whether in C++
+	mode.
+	* configure: Regenerate.
+
+2015-11-19  Pedro Alves  <palves@redhat.com>
+
+	* configure: Regenerate.
+
+2015-11-19  Yao Qi  <yao.qi@linaro.org>
+
+	* linux-aarch64-low.c (emit_data_processing_reg): Change opcode
+	type to uint32_t.
+
+2015-11-19  Yao Qi  <yao.qi@linaro.org>
+
+	* linux-aarch64-low.c (enum aarch64_operand_type): New.
+	(struct aarch64_operand): Move enum out.
+
+2015-11-19  Yao Qi  <yao.qi@linaro.org>
+
+	* linux-aarch64-low.c (aarch64_fill_fpregset): Cast buf to
+	struct user_fpsimd_state *.
+	(aarch64_store_fpregset): Likewise.
+
+2015-11-19  Yao Qi  <yao.qi@linaro.org>
+
+	* linux-aarch64-low.c (aarch64_fill_gregset): Cast buf to
+	struct user_pt_regs *.
+	(aarch64_store_gregset): Likewise.
+
+2015-11-18  Pedro Alves  <palves@redhat.com>
+
+	* Makefile.in (all_object_files): Add $IPA_OBJS.
+
+2015-11-17  Pedro Alves  <palves@redhat.com>
+
+	* win32-low.c (win32_resume): Use gdb_signal_from_host,
+	GDB_SIGNAL_0 and gdb_signal_to_string.
+
+2015-11-17  Pedro Alves  <palves@redhat.com>
+
+	* win32-low.c (handle_output_debug_string): Remove parameter.
+	(win32_kill): Remove our_status local and adjust call to
+	handle_output_debug_string.
+	(get_child_debug_event): Adjust call to
+	handle_output_debug_string.
+
+2015-11-03  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* linux-mips-low.c (mips_fill_gregset): Add cast.
+	(mips_store_gregset): Likewise.
+	(mips_fill_fpregset): Likewise.
+	(mips_store_fpregset): Likewise.
+
+2015-11-03  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* linux-mips-low.c (mips_add_watchpoint): Rename private to
+	priv.
+
+2015-11-03  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* linux-mips-low.c (mips_linux_new_thread): Change type of
+	watch_type to enum target_hw_bp_type.
+
+2015-11-03  Simon Marchi  <simon.marchi@polymtl.ca>
+
+		* linux-arm-low.c (raw_bkpt_type_to_arm_hwbp_type):
+		Change return type to arm_hwbp_type.
+
+2015-11-03  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* linux-aarch32-low.c (arm_fill_gregset): Add cast.
+	(arm_store_gregset): Likewise.
+	* linux-arm-low.c (arm_get_hwcap): Likewise.
+	(arm_read_description): Likewise.
+
+2015-11-03  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* linux-aarch32-low.c (aarch32_regsets): Use NULL_REGSET.
+
+2015-11-03  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* linux-ppc-low.c (ppc_get_hwcap): Add cast.
+	(ppc_fill_vsxregset): Likewise.
+	(ppc_store_vsxregset): Likewise.
+	(ppc_fill_vrregset): Likewise.
+	(ppc_store_vrregset): Likewise.
+	(ppc_fill_evrregset): Likewise.
+	(ppc_store_evrregset): Likewise.
+
+2015-11-03  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* linux-ppc-low.c (ppc_usrregs_info): Remove
+	forward-declaration.
+	(ppc_arch_setup): Move lower in file.
+
+2015-10-30  Simon Marchi  <simon.marchi@ericsson.com>
+
+	* proc-service.c (ps_pdread): Change CORE_ADDR cast to uintptr_t.
+	(ps_pdwrite): Likewise.
+
+2015-10-29 Henrik Wallin <henrik.wallin@windriver.com>
+
+	* linux-arm-low.c (arm_new_thread): Move pointer dereference
+	to after assert checks.
+
+2015-10-29  Simon Marchi  <simon.marchi@ericsson.com>
+
+	* proc-service.c (ps_pdread): Add/adjust casts.
+	(ps_pdwrite): Add/adjust casts.
+
+2015-10-29  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* server.c (handle_search_memory_1): Cast return value of
+	memmem.
+
+2015-10-29  Simon Marchi  <simon.marchi@polymtl.ca>
+
+	* server.c (write_qxfer_response): Change type of data to
+	gdb_byte *.
+
+2015-10-29  Pedro Alves  <palves@redhat.com>
+
+	* mem-break.c (Z_packet_to_bkpt_type): Add cast.
+
+2015-10-29  Pedro Alves  <palves@redhat.com>
+
+	* tracepoint.c (clear_installed_tracepoints): Add casts.
+
+2015-10-29  Pedro Alves  <palves@redhat.com>
+
+	* server.c (handle_v_cont, process_serial_event): Add enum
+	gdb_signal casts to signal parsing code.
+
+2015-10-29  Pedro Alves  <palves@redhat.com>
+
+	* linux-low.h (NULL_REGSET): Define.
+	* linux-aarch64-low.c (aarch64_regsets): Use NULL_REGSET.
+	* linux-arm-low.c (arm_regsets): Likewise.
+	* linux-crisv32-low.c (cris_regsets): Likewise.
+	* linux-m68k-low.c (m68k_regsets): Likewise.
+	* linux-mips-low.c (mips_regsets): Likewise.
+	* linux-nios2-low.c (nios2_regsets): Likewise.
+	* linux-ppc-low.c (ppc_regsets): Likewise.
+	* linux-s390-low.c (s390_regsets): Likewise.
+	* linux-sh-low.c (sh_regsets): Likewise.
+	* linux-sparc-low.c (sparc_regsets): Likewise.
+	* linux-tic6x-low.c (tic6x_regsets): Likewise.
+	* linux-tile-low.c (tile_regsets): Likewise.
+	* linux-x86-low.c (x86_regsets): Likewise.
+	* linux-xtensa-low.c (xtensa_regsets): Likewise.
+
+2015-10-29  Pedro Alves  <palves@redhat.com>
+
+	* linux-low.h (NULL_REGSET): Define.
+	* linux-aarch64-low.c (aarch64_regsets): Use NULL_REGSET.
+	* linux-arm-low.c (arm_regsets): Likewise.
+	* linux-crisv32-low.c (cris_regsets): Likewise.
+	* linux-m68k-low.c (m68k_regsets): Likewise.
+	* linux-mips-low.c (mips_regsets): Likewise.
+	* linux-nios2-low.c (nios2_regsets): Likewise.
+	* linux-ppc-low.c (ppc_regsets): Likewise.
+	* linux-s390-low.c (s390_regsets): Likewise.
+	* linux-sh-low.c (sh_regsets): Likewise.
+	* linux-sparc-low.c (sparc_regsets): Likewise.
+	* linux-tic6x-low.c (tic6x_regsets): Likewise.
+	* linux-tile-low.c (tile_regsets): Likewise.
+	* linux-x86-low.c (x86_regsets): Likewise.
+	* linux-xtensa-low.c (xtensa_regsets): Likewise.
+
+2015-10-26  Doug Evans  <dje@google.com>
+
+	* linux-low.c (__SIGRTMIN): Move to nat/linux-nat.h.
+
+2015-10-26  Doug Evans  <dje@google.com>
+
+	* linux-low.c (W_STOPCODE): Moved to common/gdb_wait.h.
+
+2015-10-26  Doug Evans  <dje@google.com>
+
+	* thread-db.c (find_one_thread): Cast ti.ti_tid to unsigned long
+	for debug_printf.
+	(attach_thread, find_new_threads_callback): Ditto.
+
+2015-10-23  Antoine Tremblay  <antoine.tremblay@ericsson.com>
+
+	* mem-break.h (set_breakpoint_data): Remove.
+
+2015-10-23  Antoine Tremblay  <antoine.tremblay@ericsson.com>
+
+	* nto-low.c (nto_sw_breakpoint_from_kind): New function.
+	(struct target_ops) <sw_breakpoint_from_kind>: Initialize.
+	(initialize_low): Remove set_breakpoint_data call.
+	* spu-low.c (spu_sw_breakpoint_from_kind): New function.
+	(struct target_ops) <sw_breakpoint_from_kind>: Iniitalize.
+	(initialize_low): Remove set_breakpoint_data call.
+	* win32-low.c (win32_sw_breakpoint_from_kind): New function.
+	(struct target_ops) <sw_breakpoint_from_kind>: Initialize.
+	(initialize_low): Remove set_breakpoint_data call.
+
+2015-10-23  Antoine Tremblay  <antoine.tremblay@ericsson.com>
+
+	* linux-low.c (default_breakpoint_kind_from_pc): Move to target.c.
+	* mem-break.c (set_breakpoint_at): Use target_breakpoint_kind_from_pc.
+	* target.c (default_breakpoint_kind_from_pc): Moved from linux-low.c
+	* target.h (target_breakpoint_kind_from_pc): New macro.
+
+2015-10-22  Antoine Tremblay  <antoine.tremblay@ericsson.com>
+
+	* linux-low.c (default_breakpoint_kind_from_pc): New function.
+	(linux_breakpoint_kind_from_pc): Use default_breakpoint_kind_from_pc for
+	the default breakpoint kind.
+
+2015-10-21  Antoine Tremblay  <antoine.tremblay@ericsson.com>
+
+	* linux-arm-low.c (arm_supports_z_point_type): Add software
+	breakpoint support.
+
+2015-10-21  Antoine Tremblay  <antoine.tremblay@ericsson.com>
+
+	* linux-arm-low.c: Refactor breakpoint definitions.
+	(arm_breakpoint_at): Adjust for arm_abi_breakpoint.
+	(arm_sw_breakpoint_from_kind): Adjust for arm_breakpoint.
+
+2015-10-21  Antoine Tremblay  <antoine.tremblay@ericsson.com>
+
+	* Makefile.in: Add arm.c/o.
+	* configure.srv: Likewise.
+	* linux-arm-low.c (arm_breakpoint_kinds): New enum.
+	(arm_breakpoint_kind_from_pc): New function.
+	(arm_sw_breakpoint_from_kind): Return proper kind.
+	(struct linux_target_ops) <breakpoint_kind_from_pc>: Initialize.
+
+2015-10-21  Antoine Tremblay  <antoine.tremblay@ericsson.com>
+
+	* linux-low.c (initialize_low): Ajdust for breakpoint global variables
+	removal.
+	* mem-break.c : Remove breakpoint_data/breakpoint_len global variables.
+	(struct raw_breakpoint) <size>: Remove.
+	(struct raw_breakpoint) <kind>: Add.
+	(bp_size): New function.
+	(bp_opcode): Likewise.
+	(find_raw_breakpoint_at): Adjust for kind.
+	(insert_memory_breakpoint): Adjust for kind call bp_size,bp_opcode.
+	(remove_memory_breakpoint): Adjust for kind call bp_size.
+	(set_raw_breakpoint_at): Adjust for kind.
+	(set_breakpoint): Likewise.
+	(set_breakpoint_at): Call breakpoint_kind_from_pc.
+	(delete_raw_breakpoint): Adjust for kind.
+	(delete_breakpoint): Likewise.
+	(find_gdb_breakpoint): Likewise.
+	(set_gdb_breakpoint_1): Likewise.
+	(set_gdb_breakpoint): Likewise.
+	(delete_gdb_breakpoint_1): Likewise.
+	(delete_gdb_breakpoint): Likewise.
+	(uninsert_raw_breakpoint): Likewise.
+	(reinsert_raw_breakpoint): Likewise.
+	(set_breakpoint_data): Remove.
+	(validate_inserted_breakpoint): Adjust for kind call bp_size,bp_opcode.
+	(check_mem_read): Adjust for kind call bp_size.
+	(check_mem_write): Adjust for kind call bp_size,bp_opcode.
+	(clone_one_breakpoint): Adjust for kind.
+	* mem-break.h (set_gdb_breakpoint): Likewise.
+	(delete_gdb_breakpoint): Likewise.
+	* server.c (process_serial_event): Likewise.
+
+2015-10-21  Antoine Tremblay  <antoine.tremblay@ericsson.com>
+
+	* linux-aarch64-low.c (aarch64_sw_breakpoint_from_kind): New function.
+	(struct linux_target_ops) <breakpoint>: Remove.
+	(struct linux_target_ops) <breakpoint_len>: Remove.
+	(struct linux_target_ops) <breakpoint_kind_from_pc>: Initialize field.
+	(struct linux_target_ops) <sw_breakpoint_from_kind>: Initialize field.
+	* linux-arm-low.c (arm_breakpoint_kind_from_pc): New function.
+	(arm_sw_breakpoint_from_kind): New function.
+	* linux-bfin-low.c (bfin_sw_breakpoint_from_kind): New function.
+	(struct linux_target_ops) <breakpoint>: Remove.
+	(struct linux_target_ops) <breakpoint_len>: Remove.
+	(struct linux_target_ops) <breakpoint_kind_from_pc>: Initialize field.
+	(struct linux_target_ops) <sw_breakpoint_from_kind>: Initialize field.
+	* linux-cris-low.c (cris_sw_breakpoint_from_kind): New function.
+	(struct linux_target_ops) <breakpoint>: Remove.
+	(struct linux_target_ops) <breakpoint_len>: Remove.
+	(struct linux_target_ops) <breakpoint_kind_from_pc>: Initialize field.
+	(struct linux_target_ops) <sw_breakpoint_from_kind>: Initialize field.
+	* linux-crisv32-low.c (cris_sw_breakpoint_from_kind): New function.
+	(struct linux_target_ops) <breakpoint>: Remove.
+	(struct linux_target_ops) <breakpoint_len>: Remove.
+	(struct linux_target_ops) <breakpoint_kind_from_pc>: Initialize field.
+	(struct linux_target_ops) <sw_breakpoint_from_kind>: Initialize field.
+	* linux-low.c (linux_wait_1): Call breakpoint_kind_from_pc
+	and sw_breakpoint_from_kind to increment the pc.
+	(linux_breakpoint_kind_from_pc): New function.
+	(linux_sw_breakpoint_from_kind): New function.
+	(struct target_ops) <sw_breakpoint_from_kind>: Initialize field.
+	(initialize_low): Call breakpoint_kind_from_pc and
+	sw_breakpoint_from_kind to replace breakpoint_data/len.
+	* linux-low.h (struct linux_target_ops) <breakpoint_kind_from_pc>:
+	New field.
+	(struct linux_target_ops) <sw_breakpoint_from_kind>: Likewise.
+	* linux-m32r-low.c (m32r_sw_breakpoint_from_kind): New function.
+	(struct linux_target_ops) <breakpoint>: Remove.
+	(struct linux_target_ops) <breakpoint_len>: Remove.
+	(struct linux_target_ops) <breakpoint_kind_from_pc>: Initialize field.
+	(struct linux_target_ops) <sw_breakpoint_from_kind>: Initialize field.
+	* linux-m68k-low.c (m68k_sw_breakpoint_from_kind): New function.
+	(struct linux_target_ops) <breakpoint>: Remove.
+	(struct linux_target_ops) <breakpoint_len>: Remove.
+	(struct linux_target_ops) <breakpoint_kind_from_pc>: Initialize field.
+	(struct linux_target_ops) <sw_breakpoint_from_kind>: Initialize field.
+	* linux-mips-low.c (mips_sw_breakpoint_from_kind): New function.
+	(struct linux_target_ops) <breakpoint>: Remove.
+	(struct linux_target_ops) <breakpoint_len>: Remove.
+	(struct linux_target_ops) <breakpoint_kind_from_pc>: Initialize field.
+	(struct linux_target_ops) <sw_breakpoint_from_kind>: Initialize field.
+	* linux-nios2-low.c (nios2_sw_breakpoint_from_kind): New function.
+	(struct linux_target_ops) <breakpoint>: Remove.
+	(struct linux_target_ops) <breakpoint_len>: Remove.
+	(struct linux_target_ops) <breakpoint_kind_from_pc>: Initialize field.
+	(struct linux_target_ops) <sw_breakpoint_from_kind>: Initialize field.
+	* linux-ppc-low.c (ppc_sw_breakpoint_from_kind): New function.
+	(struct linux_target_ops) <breakpoint>: Remove.
+	(struct linux_target_ops) <breakpoint_len>: Remove.
+	(struct linux_target_ops) <breakpoint_kind_from_pc>: Initialize field.
+	(struct linux_target_ops) <sw_breakpoint_from_kind>: Initialize field.
+	* linux-s390-low.c (s390_sw_breakpoint_from_kind): New function.
+	(struct linux_target_ops) <breakpoint>: Remove.
+	(struct linux_target_ops) <breakpoint_len>: Remove.
+	(struct linux_target_ops) <breakpoint_kind_from_pc>: Initialize field.
+	(struct linux_target_ops) <sw_breakpoint_from_kind>: Initialize field.
+	* linux-sh-low.c (sh_sw_breakpoint_from_kind): New function.
+	(struct linux_target_ops) <breakpoint>: Remove.
+	(struct linux_target_ops) <breakpoint_len>: Remove.
+	(struct linux_target_ops) <breakpoint_kind_from_pc>: Initialize field.
+	(struct linux_target_ops) <sw_breakpoint_from_kind>: Initialize field.
+	* linux-sparc-low.c (sparc_sw_breakpoint_from_kind): New function.
+	(struct linux_target_ops) <breakpoint>: Remove.
+	(struct linux_target_ops) <breakpoint_len>: Remove.
+	(struct linux_target_ops) <breakpoint_kind_from_pc>: Initialize field.
+	(struct linux_target_ops) <sw_breakpoint_from_kind>: Initialize field.
+	* linux-tic6x-low.c (tic6x_sw_breakpoint_from_kind): New function.
+	(struct linux_target_ops) <breakpoint>: Remove.
+	(struct linux_target_ops) <breakpoint_len>: Remove.
+	(struct linux_target_ops) <breakpoint_kind_from_pc>: Initialize field.
+	(struct linux_target_ops) <sw_breakpoint_from_kind>: Initialize field.
+	* linux-tile-low.c (tile_sw_breakpoint_from_kind): New function.
+	* linux-x86-low.c (x86_sw_breakpoint_from_kind): New function.
+	(struct linux_target_ops) <breakpoint>: Remove.
+	(struct linux_target_ops) <breakpoint_len>: Remove.
+	(struct linux_target_ops) <breakpoint_kind_from_pc>: Initialize field.
+	(struct linux_target_ops) <sw_breakpoint_from_kind>: Initialize field.
+	* linux-xtensa-low.c (xtensa_sw_breakpoint_from_kind) New function.
+	(struct linux_target_ops) <breakpoint>: Remove.
+	(struct linux_target_ops) <breakpoint_len>: Remove.
+	(struct linux_target_ops) <breakpoint_kind_from_pc>: Initialize field.
+	(struct linux_target_ops) <sw_breakpoint_from_kind>: Initialize field.
+
+2015-10-21  Antoine Tremblay  <antoine.tremblay@ericsson.com>
+
+	* linux-cris-low.c (cris_get_pc): Remove void arg.
+
+2015-10-16  Aleksandar Ristovski  <aristovski@qnx.com>
+
+	* gdbserver/nto-low.c (nto_insert_point, nto_remove_point): Fix
+	variable name.
+
+2015-10-16  Aleksandar Ristovski  <aristovski@qnx.com>
+
+	* inferiors.c (thread_pid_matches_callback): New function.
+	(find_thread_process): New function.
+	(remove_thread): Reset current_thread.
+	(remove_process): Assert threads have been removed first.
+
+2015-10-15  Yao Qi  <yao.qi@linaro.org>
+
+	* linux-aarch64-low.c (aarch64_insert_point): Set len to 2
+	if it is 3.
+	(aarch64_remove_point): Likewise.
+	* regcache.c (regcache_register_size): New function.
+
 2015-10-12  Yao Qi  <yao.qi@linaro.org>
 
 	* linux-aarch64-low.c: Update all callers as emit_load_store

@@ -746,21 +746,35 @@ unpush_target (struct target_ops *t)
   return 1;
 }
 
+/* Unpush TARGET and assert that it worked.  */
+
+static void
+unpush_target_and_assert (struct target_ops *target)
+{
+  if (!unpush_target (target))
+    {
+      fprintf_unfiltered (gdb_stderr,
+			  "pop_all_targets couldn't find target %s\n",
+			  target->to_shortname);
+      internal_error (__FILE__, __LINE__,
+		      _("failed internal consistency check"));
+    }
+}
+
 void
 pop_all_targets_above (enum strata above_stratum)
 {
   while ((int) (current_target.to_stratum) > (int) above_stratum)
-    {
-      if (!unpush_target (target_stack))
-	{
-	  fprintf_unfiltered (gdb_stderr,
-			      "pop_all_targets couldn't find target %s\n",
-			      target_stack->to_shortname);
-	  internal_error (__FILE__, __LINE__,
-			  _("failed internal consistency check"));
-	  break;
-	}
-    }
+    unpush_target_and_assert (target_stack);
+}
+
+/* See target.h.  */
+
+void
+pop_all_targets_at_and_above (enum strata stratum)
+{
+  while ((int) (current_target.to_stratum) >= (int) stratum)
+    unpush_target_and_assert (target_stack);
 }
 
 void
@@ -1235,7 +1249,7 @@ memory_xfer_partial (struct target_ops *ops, enum target_object object,
     }
   else
     {
-      void *buf;
+      gdb_byte *buf;
       struct cleanup *old_chain;
 
       /* A large write request is likely to be partially satisfied
@@ -1245,7 +1259,7 @@ memory_xfer_partial (struct target_ops *ops, enum target_object object,
 	 subset of it.  Cap writes to 4KB to mitigate this.  */
       len = min (4096, len);
 
-      buf = xmalloc (len);
+      buf = (gdb_byte *) xmalloc (len);
       old_chain = make_cleanup (xfree, buf);
       memcpy (buf, writebuf, len);
 
@@ -1380,7 +1394,7 @@ target_xfer_partial (struct target_ops *ops,
 
 /* Read LEN bytes of target memory at address MEMADDR, placing the
    results in GDB's memory at MYADDR.  Returns either 0 for success or
-   TARGET_XFER_E_IO if any error occurs.
+   -1 if any error occurs.
 
    If an error occurs, no guarantee is made about the contents of the data at
    MYADDR.  In particular, the caller should not depend upon partial reads
@@ -1399,7 +1413,7 @@ target_read_memory (CORE_ADDR memaddr, gdb_byte *myaddr, ssize_t len)
 		   myaddr, memaddr, len) == len)
     return 0;
   else
-    return TARGET_XFER_E_IO;
+    return -1;
 }
 
 /* See target/target.h.  */
@@ -1431,7 +1445,7 @@ target_read_raw_memory (CORE_ADDR memaddr, gdb_byte *myaddr, ssize_t len)
 		   myaddr, memaddr, len) == len)
     return 0;
   else
-    return TARGET_XFER_E_IO;
+    return -1;
 }
 
 /* Like target_read_memory, but specify explicitly that this is a read from
@@ -1446,7 +1460,7 @@ target_read_stack (CORE_ADDR memaddr, gdb_byte *myaddr, ssize_t len)
 		   myaddr, memaddr, len) == len)
     return 0;
   else
-    return TARGET_XFER_E_IO;
+    return -1;
 }
 
 /* Like target_read_memory, but specify explicitly that this is a read from
@@ -1461,14 +1475,14 @@ target_read_code (CORE_ADDR memaddr, gdb_byte *myaddr, ssize_t len)
 		   myaddr, memaddr, len) == len)
     return 0;
   else
-    return TARGET_XFER_E_IO;
+    return -1;
 }
 
 /* Write LEN bytes from MYADDR to target memory at address MEMADDR.
-   Returns either 0 for success or TARGET_XFER_E_IO if any
-   error occurs.  If an error occurs, no guarantee is made about how
-   much data got written.  Callers that can deal with partial writes
-   should call target_write.  */
+   Returns either 0 for success or -1 if any error occurs.  If an
+   error occurs, no guarantee is made about how much data got written.
+   Callers that can deal with partial writes should call
+   target_write.  */
 
 int
 target_write_memory (CORE_ADDR memaddr, const gdb_byte *myaddr, ssize_t len)
@@ -1479,14 +1493,14 @@ target_write_memory (CORE_ADDR memaddr, const gdb_byte *myaddr, ssize_t len)
 		    myaddr, memaddr, len) == len)
     return 0;
   else
-    return TARGET_XFER_E_IO;
+    return -1;
 }
 
 /* Write LEN bytes from MYADDR to target raw memory at address
-   MEMADDR.  Returns either 0 for success or TARGET_XFER_E_IO
-   if any error occurs.  If an error occurs, no guarantee is made
-   about how much data got written.  Callers that can deal with
-   partial writes should call target_write.  */
+   MEMADDR.  Returns either 0 for success or -1 if any error occurs.
+   If an error occurs, no guarantee is made about how much data got
+   written.  Callers that can deal with partial writes should call
+   target_write.  */
 
 int
 target_write_raw_memory (CORE_ADDR memaddr, const gdb_byte *myaddr, ssize_t len)
@@ -1497,7 +1511,7 @@ target_write_raw_memory (CORE_ADDR memaddr, const gdb_byte *myaddr, ssize_t len)
 		    myaddr, memaddr, len) == len)
     return 0;
   else
-    return TARGET_XFER_E_IO;
+    return -1;
 }
 
 /* Fetch the target's memory map.  */
@@ -1822,8 +1836,9 @@ read_memory_robust (struct target_ops *ops,
 	      /* Got an error reading full chunk.  See if maybe we can read
 		 some subrange.  */
 	      xfree (buffer);
-	      read_whatever_is_readable (ops, offset + xfered_total, unit_size,
-					 offset + xfered_total + to_read, &result);
+	      read_whatever_is_readable (ops, offset + xfered_total,
+					 offset + xfered_total + to_read,
+					 unit_size, &result);
 	      xfered_total += to_read;
 	    }
 	  else
@@ -2250,7 +2265,7 @@ target_pid_to_str (ptid_t ptid)
   return (*current_target.to_pid_to_str) (&current_target, ptid);
 }
 
-char *
+const char *
 target_thread_name (struct thread_info *info)
 {
   return current_target.to_thread_name (&current_target, info);
@@ -2391,8 +2406,8 @@ simple_search_memory (struct target_ops *ops,
       gdb_byte *found_ptr;
       unsigned nr_search_bytes = min (search_space_len, search_buf_size);
 
-      found_ptr = memmem (search_buf, nr_search_bytes,
-			  pattern, pattern_len);
+      found_ptr = (gdb_byte *) memmem (search_buf, nr_search_bytes,
+				       pattern, pattern_len);
 
       if (found_ptr != NULL)
 	{
@@ -3529,7 +3544,8 @@ target_verify_memory (const gdb_byte *data, CORE_ADDR memaddr, ULONGEST size)
    target.h.  */
 
 int
-target_insert_mask_watchpoint (CORE_ADDR addr, CORE_ADDR mask, int rw)
+target_insert_mask_watchpoint (CORE_ADDR addr, CORE_ADDR mask,
+			       enum target_hw_bp_type rw)
 {
   return current_target.to_insert_mask_watchpoint (&current_target,
 						   addr, mask, rw);
@@ -3539,7 +3555,8 @@ target_insert_mask_watchpoint (CORE_ADDR addr, CORE_ADDR mask, int rw)
    target.h.  */
 
 int
-target_remove_mask_watchpoint (CORE_ADDR addr, CORE_ADDR mask, int rw)
+target_remove_mask_watchpoint (CORE_ADDR addr, CORE_ADDR mask,
+			       enum target_hw_bp_type rw)
 {
   return current_target.to_remove_mask_watchpoint (&current_target,
 						   addr, mask, rw);

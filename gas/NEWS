@@ -1,5 +1,10 @@
 -*- text -*-
 
+Changes in 2.26:
+
+* Add a configure option --enable-compressed-debug-sections={all,gas} to
+  decide whether DWARF debug sections should be compressed by default.
+
 * Add support for the ARC EM/HS, and ARC600/700 architectures.  Remove
   assembler support for Argonaut RISC architectures.
 

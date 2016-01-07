@@ -1104,7 +1104,7 @@ print_spaces (int n, struct ui_file *file)
 /* Print a host address.  */
 
 void
-gdb_print_host_address (const void *addr, struct ui_file *stream)
+gdb_print_host_address_1 (const void *addr, struct ui_file *stream)
 {
   fprintf_filtered (stream, "%s", host_address_to_string (addr));
 }
@@ -1677,8 +1677,9 @@ init_page_info (void)
          Only try to use tgetnum function if rl_get_screen_size
          did not return a useful value. */
       if (((rows <= 0) && (tgetnum ("li") < 0))
-	/* Also disable paging if inside EMACS.  */
-	  || getenv ("EMACS"))
+	/* Also disable paging if inside Emacs.  $EMACS was used
+	   before Emacs v25.1, $INSIDE_EMACS is used since then.  */
+	  || getenv ("EMACS") || getenv ("INSIDE_EMACS"))
 	{
 	  /* The number of lines per page is not mentioned in the terminal
 	     description or EMACS evironment variable is set.  This probably
@@ -3355,14 +3356,14 @@ gdb_filename_fnmatch (const char *pattern, const char *string, int flags)
 
     /* Replace '\' by '/' in both strings.  */
 
-    pattern_slash = alloca (strlen (pattern) + 1);
+    pattern_slash = (char *) alloca (strlen (pattern) + 1);
     strcpy (pattern_slash, pattern);
     pattern = pattern_slash;
     for (; *pattern_slash != 0; pattern_slash++)
       if (IS_DIR_SEPARATOR (*pattern_slash))
 	*pattern_slash = '/';
 
-    string_slash = alloca (strlen (string) + 1);
+    string_slash = (char *) alloca (strlen (string) + 1);
     strcpy (string_slash, string);
     string = string_slash;
     for (; *string_slash != 0; string_slash++)

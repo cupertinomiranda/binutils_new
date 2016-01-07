@@ -105,7 +105,7 @@ aarch64_cannot_fetch_register (int regno)
 static void
 aarch64_fill_gregset (struct regcache *regcache, void *buf)
 {
-  struct user_pt_regs *regset = buf;
+  struct user_pt_regs *regset = (struct user_pt_regs *) buf;
   int i;
 
   for (i = 0; i < AARCH64_X_REGS_NUM; i++)
@@ -118,7 +118,7 @@ aarch64_fill_gregset (struct regcache *regcache, void *buf)
 static void
 aarch64_store_gregset (struct regcache *regcache, const void *buf)
 {
-  const struct user_pt_regs *regset = buf;
+  const struct user_pt_regs *regset = (const struct user_pt_regs *) buf;
   int i;
 
   for (i = 0; i < AARCH64_X_REGS_NUM; i++)
@@ -131,7 +131,7 @@ aarch64_store_gregset (struct regcache *regcache, const void *buf)
 static void
 aarch64_fill_fpregset (struct regcache *regcache, void *buf)
 {
-  struct user_fpsimd_state *regset = buf;
+  struct user_fpsimd_state *regset = (struct user_fpsimd_state *) buf;
   int i;
 
   for (i = 0; i < AARCH64_V_REGS_NUM; i++)
@@ -143,7 +143,8 @@ aarch64_fill_fpregset (struct regcache *regcache, void *buf)
 static void
 aarch64_store_fpregset (struct regcache *regcache, const void *buf)
 {
-  const struct user_fpsimd_state *regset = buf;
+  const struct user_fpsimd_state *regset
+    = (const struct user_fpsimd_state *) buf;
   int i;
 
   for (i = 0; i < AARCH64_V_REGS_NUM; i++)
@@ -315,9 +316,17 @@ aarch64_insert_point (enum raw_bkpt_type type, CORE_ADDR addr,
 	ret = -1;
     }
   else
-    ret =
-      aarch64_handle_breakpoint (targ_type, addr, len, 1 /* is_insert */,
-				 state);
+    {
+      if (len == 3)
+	{
+	  /* LEN is 3 means the breakpoint is set on a 32-bit thumb
+	     instruction.   Set it to 2 to correctly encode length bit
+	     mask in hardware/watchpoint control register.  */
+	  len = 2;
+	}
+      ret = aarch64_handle_breakpoint (targ_type, addr, len,
+				       1 /* is_insert */, state);
+    }
 
   if (show_debug_regs)
     aarch64_show_debug_reg_state (state, "insert_point", addr, len,
@@ -353,9 +362,17 @@ aarch64_remove_point (enum raw_bkpt_type type, CORE_ADDR addr,
       aarch64_handle_watchpoint (targ_type, addr, len, 0 /* is_insert */,
 				 state);
   else
-    ret =
-      aarch64_handle_breakpoint (targ_type, addr, len, 0 /* is_insert */,
-				 state);
+    {
+      if (len == 3)
+	{
+	  /* LEN is 3 means the breakpoint is set on a 32-bit thumb
+	     instruction.   Set it to 2 to correctly encode length bit
+	     mask in hardware/watchpoint control register.  */
+	  len = 2;
+	}
+      ret = aarch64_handle_breakpoint (targ_type, addr, len,
+				       0 /* is_insert */,  state);
+    }
 
   if (show_debug_regs)
     aarch64_show_debug_reg_state (state, "remove_point", addr, len,
@@ -523,7 +540,7 @@ static struct regset_info aarch64_regsets[] =
     sizeof (struct user_fpsimd_state), FP_REGS,
     aarch64_fill_fpregset, aarch64_store_fpregset
   },
-  { 0, 0, 0, -1, -1, NULL, NULL }
+  NULL_REGSET
 };
 
 static struct regsets_info aarch64_regsets_info =
@@ -597,17 +614,20 @@ enum aarch64_condition_codes
   LE = 0xd,
 };
 
+enum aarch64_operand_type
+{
+  OPERAND_IMMEDIATE,
+  OPERAND_REGISTER,
+};
+
 /* Representation of an operand.  At this time, it only supports register
    and immediate types.  */
 
 struct aarch64_operand
 {
   /* Type of the operand.  */
-  enum
-    {
-      OPERAND_IMMEDIATE,
-      OPERAND_REGISTER,
-    } type;
+  enum aarch64_operand_type type;
+
   /* Value of the operand according to the type.  */
   union
     {
@@ -1009,7 +1029,7 @@ emit_stlr (uint32_t *buf, struct aarch64_register rt,
 /* Helper function for data processing instructions with register sources.  */
 
 static int
-emit_data_processing_reg (uint32_t *buf, enum aarch64_opcodes opcode,
+emit_data_processing_reg (uint32_t *buf, uint32_t opcode,
 			  struct aarch64_register rd,
 			  struct aarch64_register rn,
 			  struct aarch64_register rm)
@@ -2915,6 +2935,15 @@ aarch64_supports_range_stepping (void)
   return 1;
 }
 
+/* Implementation of linux_target_ops method "sw_breakpoint_from_kind".  */
+
+static const gdb_byte *
+aarch64_sw_breakpoint_from_kind (int kind, int *size)
+{
+  *size = aarch64_breakpoint_len;
+  return aarch64_breakpoint;
+}
+
 struct linux_target_ops the_low_target =
 {
   aarch64_arch_setup,
@@ -2924,8 +2953,8 @@ struct linux_target_ops the_low_target =
   NULL, /* fetch_register */
   aarch64_get_pc,
   aarch64_set_pc,
-  (const unsigned char *) &aarch64_breakpoint,
-  aarch64_breakpoint_len,
+  NULL, /* breakpoint_kind_from_pc */
+  aarch64_sw_breakpoint_from_kind,
   NULL, /* breakpoint_reinsert_addr */
   0,    /* decr_pc_after_break */
   aarch64_breakpoint_at,

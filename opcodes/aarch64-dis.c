@@ -1601,6 +1601,45 @@ convert_bfm_to_bfi (aarch64_inst *inst)
 }
 
 /* The instruction written:
+     BFC <Xd>, #<lsb>, #<width>
+   is equivalent to:
+     BFM <Xd>, XZR, #((64-<lsb>)&0x3f), #(<width>-1).  */
+
+static int
+convert_bfm_to_bfc (aarch64_inst *inst)
+{
+  int64_t immr, imms, val;
+
+  /* Should have been assured by the base opcode value.  */
+  assert (inst->operands[1].reg.regno == 0x1f);
+
+  immr = inst->operands[2].imm.value;
+  imms = inst->operands[3].imm.value;
+  val = inst->operands[2].qualifier == AARCH64_OPND_QLF_imm_0_31 ? 32 : 64;
+  if (imms < immr)
+    {
+      /* Drop XZR from the second operand.  */
+      copy_operand_info (inst, 1, 2);
+      copy_operand_info (inst, 2, 3);
+      inst->operands[3].type = AARCH64_OPND_NIL;
+
+      /* Recalculate the immediates.  */
+      inst->operands[1].imm.value = (val - immr) & (val - 1);
+      inst->operands[2].imm.value = imms + 1;
+
+      /* The two opcodes have different qualifiers for the operands; reset to
+	 help the checking.  */
+      reset_operand_qualifier (inst, 1);
+      reset_operand_qualifier (inst, 2);
+      reset_operand_qualifier (inst, 3);
+
+      return 1;
+    }
+
+  return 0;
+}
+
+/* The instruction written:
      LSL <Xd>, <Xn>, #<shift>
    is equivalent to:
      UBFM <Xd>, <Xn>, #((64-<shift>)&0x3f), #(63-<shift>).  */
@@ -1759,6 +1798,8 @@ convert_to_alias (aarch64_inst *inst, const aarch64_opcode *alias)
     case OP_BFI:
     case OP_UBFIZ:
       return convert_bfm_to_bfi (inst);
+    case OP_BFC:
+      return convert_bfm_to_bfc (inst);
     case OP_MOV_V:
       return convert_orr_to_mov (inst);
     case OP_MOV_IMM_WIDE:
@@ -1866,7 +1907,7 @@ determine_disassembling_preference (struct aarch64_inst *inst)
   for (; alias; alias = aarch64_find_next_alias_opcode (alias))
     {
       DEBUG_TRACE ("try %s", alias->name);
-      assert (alias_opcode_p (alias));
+      assert (alias_opcode_p (alias) || opcode_has_alias (opcode));
 
       /* An alias can be a pseudo opcode which will never be used in the
 	 disassembly, e.g. BIC logical immediate is such a pseudo opcode
@@ -2029,11 +2070,13 @@ user_friendly_fixup (aarch64_inst *inst)
     }
 }
 
-/* Decode INSN and fill in *INST the instruction information.  Return zero
-   on success.  */
+/* Decode INSN and fill in *INST the instruction information.  An alias
+   opcode may be filled in *INSN if NOALIASES_P is FALSE.  Return zero on
+   success.  */
 
 int
-aarch64_decode_insn (aarch64_insn insn, aarch64_inst *inst)
+aarch64_decode_insn (aarch64_insn insn, aarch64_inst *inst,
+		     bfd_boolean noaliases_p)
 {
   const aarch64_opcode *opcode = aarch64_opcode_lookup (insn);
 
@@ -2060,7 +2103,7 @@ aarch64_decode_insn (aarch64_insn insn, aarch64_inst *inst)
     {
       /* But only one opcode can be decoded successfully for, as the
 	 decoding routine will check the constraint carefully.  */
-      if (aarch64_opcode_decode (opcode, insn, inst, no_aliases) == 1)
+      if (aarch64_opcode_decode (opcode, insn, inst, noaliases_p) == 1)
 	return ERR_OK;
       opcode = aarch64_find_next_opcode (opcode);
     }
@@ -2172,7 +2215,7 @@ print_insn_aarch64_word (bfd_vma pc,
        addresses, since the addend is not currently pc-relative.  */
     pc = 0;
 
-  ret = aarch64_decode_insn (word, &inst);
+  ret = aarch64_decode_insn (word, &inst, no_aliases);
 
   if (((word >> 21) & 0x3ff) == 1)
     {

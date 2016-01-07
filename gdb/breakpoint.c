@@ -173,6 +173,10 @@ static int breakpoint_location_address_match (struct bp_location *bl,
 					      struct address_space *aspace,
 					      CORE_ADDR addr);
 
+static int breakpoint_location_address_range_overlap (struct bp_location *,
+						      struct address_space *,
+						      CORE_ADDR, int);
+
 static void breakpoints_info (char *, int);
 
 static void watchpoints_info (char *, int);
@@ -1771,6 +1775,36 @@ extract_bitfield_from_watchpoint_value (struct watchpoint *w, struct value *val)
   return bit_val;
 }
 
+/* Allocate a dummy location and add it to B, which must be a software
+   watchpoint.  This is required because even if a software watchpoint
+   is not watching any memory, bpstat_stop_status requires a location
+   to be able to report stops.  */
+
+static void
+software_watchpoint_add_no_memory_location (struct breakpoint *b,
+					    struct program_space *pspace)
+{
+  gdb_assert (b->type == bp_watchpoint && b->loc == NULL);
+
+  b->loc = allocate_bp_location (b);
+  b->loc->pspace = pspace;
+  b->loc->address = -1;
+  b->loc->length = -1;
+}
+
+/* Returns true if B is a software watchpoint that is not watching any
+   memory (e.g., "watch $pc").  */
+
+static int
+is_no_memory_software_watchpoint (struct breakpoint *b)
+{
+  return (b->type == bp_watchpoint
+	  && b->loc != NULL
+	  && b->loc->next == NULL
+	  && b->loc->address == -1
+	  && b->loc->length == -1);
+}
+
 /* Assuming that B is a watchpoint:
    - Reparse watchpoint expression, if REPARSE is non-zero
    - Evaluate expression and store the result in B->val
@@ -2134,14 +2168,7 @@ update_watchpoint (struct watchpoint *b, int reparse)
 	 bpstat_stop_status requires a location to be able to report
 	 stops, so make sure there's at least a dummy one.  */
       if (b->base.type == bp_watchpoint && b->base.loc == NULL)
-	{
-	  struct breakpoint *base = &b->base;
-	  base->loc = allocate_bp_location (base);
-	  base->loc->pspace = frame_pspace;
-	  base->loc->address = -1;
-	  base->loc->length = -1;
-	  base->loc->watchpoint_type = -1;
-	}
+	software_watchpoint_add_no_memory_location (&b->base, frame_pspace);
     }
   else if (!within_current_scope)
     {
@@ -4241,6 +4268,40 @@ breakpoint_here_p (struct address_space *aspace, CORE_ADDR pc)
     }
 
   return any_breakpoint_here ? ordinary_breakpoint_here : no_breakpoint_here;
+}
+
+/* See breakpoint.h.  */
+
+int
+breakpoint_in_range_p (struct address_space *aspace,
+		       CORE_ADDR addr, ULONGEST len)
+{
+  struct bp_location *bl, **blp_tmp;
+
+  ALL_BP_LOCATIONS (bl, blp_tmp)
+    {
+      if (bl->loc_type != bp_loc_software_breakpoint
+	  && bl->loc_type != bp_loc_hardware_breakpoint)
+	continue;
+
+      if ((breakpoint_enabled (bl->owner)
+	   || bl->permanent)
+	  && breakpoint_location_address_range_overlap (bl, aspace,
+							addr, len))
+	{
+	  if (overlay_debugging
+	      && section_is_overlay (bl->section)
+	      && !section_is_mapped (bl->section))
+	    {
+	      /* Unmapped overlay -- can't be a match.  */
+	      continue;
+	    }
+
+	  return 1;
+	}
+    }
+
+  return 0;
 }
 
 /* Return true if there's a moribund breakpoint at PC.  */
@@ -6629,14 +6690,14 @@ breakpoint_address_bits (struct breakpoint *b)
   int print_address_bits = 0;
   struct bp_location *loc;
 
+  /* Software watchpoints that aren't watching memory don't have an
+     address to print.  */
+  if (is_no_memory_software_watchpoint (b))
+    return 0;
+
   for (loc = b->loc; loc; loc = loc->next)
     {
       int addr_bit;
-
-      /* Software watchpoints that aren't watching memory don't have
-	 an address to print.  */
-      if (b->type == bp_watchpoint && loc->watchpoint_type == -1)
-	continue;
 
       addr_bit = gdbarch_addr_bit (loc->gdbarch);
       if (addr_bit > print_address_bits)
@@ -7077,6 +7138,28 @@ breakpoint_location_address_match (struct bp_location *bl,
 	      && breakpoint_address_match_range (bl->pspace->aspace,
 						 bl->address, bl->length,
 						 aspace, addr)));
+}
+
+/* Returns true if the [ADDR,ADDR+LEN) range in ASPACE overlaps
+   breakpoint BL.  BL may be a ranged breakpoint.  In most targets, a
+   match happens only if ASPACE matches the breakpoint's address
+   space.  On targets that have global breakpoints, the address space
+   doesn't really matter.  */
+
+static int
+breakpoint_location_address_range_overlap (struct bp_location *bl,
+					   struct address_space *aspace,
+					   CORE_ADDR addr, int len)
+{
+  if (gdbarch_has_global_breakpoints (target_gdbarch ())
+      || bl->pspace->aspace == aspace)
+    {
+      int bl_len = bl->length != 0 ? bl->length : 1;
+
+      if (mem_ranges_overlap (addr, len, bl->address, bl_len))
+	return 1;
+    }
+  return 0;
 }
 
 /* If LOC1 and LOC2's owners are not tracepoints, returns false directly.
@@ -13423,7 +13506,7 @@ tracepoint_print_recreate (struct breakpoint *self, struct ui_file *fp)
 
   if (self->type == bp_fast_tracepoint)
     fprintf_unfiltered (fp, "ftrace");
-  if (self->type == bp_static_tracepoint)
+  else if (self->type == bp_static_tracepoint)
     fprintf_unfiltered (fp, "strace");
   else if (self->type == bp_tracepoint)
     fprintf_unfiltered (fp, "trace");

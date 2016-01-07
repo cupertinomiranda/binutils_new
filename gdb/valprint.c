@@ -34,6 +34,7 @@
 #include "ada-lang.h"
 #include "gdb_obstack.h"
 #include "charset.h"
+#include "typeprint.h"
 #include <ctype.h>
 
 /* Maximum number of wchars returned from wchar_iterate.  */
@@ -302,6 +303,18 @@ valprint_check_validity (struct ui_file *stream,
 			 const struct value *val)
 {
   type = check_typedef (type);
+
+  if (type_not_associated (type))
+    {
+      val_print_not_associated (stream);
+      return 0;
+    }
+
+  if (type_not_allocated (type))
+    {
+      val_print_not_allocated (stream);
+      return 0;
+    }
 
   if (TYPE_CODE (type) != TYPE_CODE_UNION
       && TYPE_CODE (type) != TYPE_CODE_STRUCT
@@ -1040,6 +1053,18 @@ value_check_printable (struct value *val, struct ui_file *stream,
     {
       fprintf_filtered (stream, _("<internal function %s>"),
 			value_internal_function_name (val));
+      return 0;
+    }
+
+  if (type_not_associated (value_type (val)))
+    {
+      val_print_not_associated (stream);
+      return 0;
+    }
+
+  if (type_not_allocated (value_type (val)))
+    {
+      val_print_not_allocated (stream);
       return 0;
     }
 
@@ -2337,7 +2362,7 @@ generic_emit_char (int c, struct type *type, struct ui_file *stream,
 			     sizeof (gdb_wchar_t), &output, translit_char);
   obstack_1grow (&output, '\0');
 
-  fputs_filtered (obstack_base (&output), stream);
+  fputs_filtered ((const char *) obstack_base (&output), stream);
 
   do_cleanups (cleanups);
 }
@@ -2692,7 +2717,7 @@ generic_printstr (struct ui_file *stream, struct type *type,
 			     sizeof (gdb_wchar_t), &output, translit_char);
   obstack_1grow (&output, '\0');
 
-  fputs_filtered (obstack_base (&output), stream);
+  fputs_filtered ((const char *) obstack_base (&output), stream);
 
   do_cleanups (cleanup);
 }
@@ -2712,7 +2737,7 @@ val_print_string (struct type *elttype, const char *encoding,
 		  const struct value_print_options *options)
 {
   int force_ellipsis = 0;	/* Force ellipsis to be printed if nonzero.  */
-  int errcode;			/* Errno returned from bad reads.  */
+  int err;			/* Non-zero if we got a bad read.  */
   int found_nul;		/* Non-zero if we found the nul char.  */
   unsigned int fetchlimit;	/* Maximum number of chars to print.  */
   int bytes_read;
@@ -2733,8 +2758,8 @@ val_print_string (struct type *elttype, const char *encoding,
   fetchlimit = (len == -1 ? options->print_max : min (len,
 						      options->print_max));
 
-  errcode = read_string (addr, len, width, fetchlimit, byte_order,
-			 &buffer, &bytes_read);
+  err = read_string (addr, len, width, fetchlimit, byte_order,
+		     &buffer, &bytes_read);
   old_chain = make_cleanup (xfree, buffer);
 
   addr += bytes_read;
@@ -2762,7 +2787,7 @@ val_print_string (struct type *elttype, const char *encoding,
 	  && extract_unsigned_integer (peekbuf, width, byte_order) != 0)
 	force_ellipsis = 1;
     }
-  else if ((len >= 0 && errcode != 0) || (len > bytes_read / width))
+  else if ((len >= 0 && err != 0) || (len > bytes_read / width))
     {
       /* Getting an error when we have a requested length, or fetching less
          than the number of characters actually requested, always make us
@@ -2773,17 +2798,17 @@ val_print_string (struct type *elttype, const char *encoding,
   /* If we get an error before fetching anything, don't print a string.
      But if we fetch something and then get an error, print the string
      and then the error message.  */
-  if (errcode == 0 || bytes_read > 0)
+  if (err == 0 || bytes_read > 0)
     {
       LA_PRINT_STRING (stream, elttype, buffer, bytes_read / width,
 		       encoding, force_ellipsis, options);
     }
 
-  if (errcode != 0)
+  if (err != 0)
     {
       char *str;
 
-      str = memory_error_message (errcode, gdbarch, addr);
+      str = memory_error_message (TARGET_XFER_E_IO, gdbarch, addr);
       make_cleanup (xfree, str);
 
       fprintf_filtered (stream, "<error: ");

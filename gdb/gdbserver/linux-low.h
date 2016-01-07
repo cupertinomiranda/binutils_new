@@ -38,6 +38,11 @@ enum regset_type {
   EXTENDED_REGS,
 };
 
+/* The arch's regsets array initializer must be terminated with a NULL
+   regset.  */
+#define NULL_REGSET \
+  { 0, 0, 0, -1, (enum regset_type) -1, NULL, NULL }
+
 struct regset_info
 {
   int get_request, set_request;
@@ -141,8 +146,13 @@ struct linux_target_ops
 
   CORE_ADDR (*get_pc) (struct regcache *regcache);
   void (*set_pc) (struct regcache *regcache, CORE_ADDR newpc);
-  const unsigned char *breakpoint;
-  int breakpoint_len;
+
+  /* See target.h for details.  */
+  int (*breakpoint_kind_from_pc) (CORE_ADDR *pcptr);
+
+  /* See target.h for details.  */
+  const gdb_byte *(*sw_breakpoint_from_kind) (int kind, int *size);
+
   CORE_ADDR (*breakpoint_reinsert_addr) (void);
 
   int decr_pc_after_break;
@@ -189,7 +199,7 @@ struct linux_target_ops
   void (*prepare_to_resume) (struct lwp_info *);
 
   /* Hook to support target specific qSupported.  */
-  void (*process_qsupported) (const char *);
+  void (*process_qsupported) (char **, int count);
 
   /* Returns true if the low target supports tracepoints.  */
   int (*supports_tracepoints) (void);

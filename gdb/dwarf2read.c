@@ -6854,7 +6854,7 @@ partial_die_full_name (struct partial_die_info *pdi,
 	  struct dwarf2_cu *ref_cu = cu;
 
 	  /* DW_FORM_ref_addr is using section offset.  */
-	  attr.name = 0;
+	  attr.name = (enum dwarf_attribute) 0;
 	  attr.form = DW_FORM_ref_addr;
 	  attr.u.unsnd = pdi->offset.sect_off;
 	  die = follow_die_ref (NULL, &attr, &ref_cu);
@@ -13218,7 +13218,20 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
   attr = dwarf2_attr (die, DW_AT_byte_size, cu);
   if (attr)
     {
-      TYPE_LENGTH (type) = DW_UNSND (attr);
+      if (attr_form_is_constant (attr))
+        TYPE_LENGTH (type) = DW_UNSND (attr);
+      else
+	{
+	  /* For the moment, dynamic type sizes are not supported
+	     by GDB's struct type.  The actual size is determined
+	     on-demand when resolving the type of a given object,
+	     so set the type's length to zero for now.  Otherwise,
+	     we record an expression as the length, and that expression
+	     could lead to a very large value, which could eventually
+	     lead to us trying to allocate that much memory when creating
+	     a value of that type.  */
+          TYPE_LENGTH (type) = 0;
+	}
     }
   else
     {
@@ -15048,7 +15061,7 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
      the bounds as signed, and thus sign-extend their values, when
      the base type is signed.  */
   negative_mask =
-    (LONGEST) -1 << (TYPE_LENGTH (base_type) * TARGET_CHAR_BIT - 1);
+    -((LONGEST) 1 << (TYPE_LENGTH (base_type) * TARGET_CHAR_BIT - 1));
   if (low.kind == PROP_CONST
       && !TYPE_UNSIGNED (base_type) && (low.data.const_val & negative_mask))
     low.data.const_val |= negative_mask;
@@ -22355,6 +22368,36 @@ set_die_type (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
       && TYPE_CODE (type) != TYPE_CODE_METHOD
       && !HAVE_GNAT_AUX_INFO (type))
     INIT_GNAT_SPECIFIC (type);
+
+  /* Read DW_AT_allocated and set in type.  */
+  attr = dwarf2_attr (die, DW_AT_allocated, cu);
+  if (attr_form_is_block (attr))
+    {
+      if (attr_to_dynamic_prop (attr, die, cu, &prop))
+        add_dyn_prop (DYN_PROP_ALLOCATED, prop, type, objfile);
+    }
+  else if (attr != NULL)
+    {
+      complaint (&symfile_complaints,
+                _("DW_AT_allocated has the wrong form (%s) at DIE 0x%x"),
+                (attr != NULL ? dwarf_form_name (attr->form) : "n/a"),
+                die->offset.sect_off);
+    }
+
+  /* Read DW_AT_associated and set in type.  */
+  attr = dwarf2_attr (die, DW_AT_associated, cu);
+  if (attr_form_is_block (attr))
+    {
+      if (attr_to_dynamic_prop (attr, die, cu, &prop))
+        add_dyn_prop (DYN_PROP_ASSOCIATED, prop, type, objfile);
+    }
+  else if (attr != NULL)
+    {
+      complaint (&symfile_complaints,
+                _("DW_AT_associated has the wrong form (%s) at DIE 0x%x"),
+                (attr != NULL ? dwarf_form_name (attr->form) : "n/a"),
+                die->offset.sect_off);
+    }
 
   /* Read DW_AT_data_location and set in type.  */
   attr = dwarf2_attr (die, DW_AT_data_location, cu);

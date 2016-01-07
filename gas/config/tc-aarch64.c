@@ -7309,6 +7309,11 @@ aarch64_force_relocation (struct fix *fixp)
 const char *
 elf64_aarch64_target_format (void)
 {
+  if (strcmp (TARGET_OS, "cloudabi") == 0)
+    {
+      /* FIXME: What to do for ilp32_p ?  */
+      return target_big_endian ? "elf64-bigaarch64-cloudabi" : "elf64-littleaarch64-cloudabi";
+    }
   if (target_big_endian)
     return ilp32_p ? "elf32-bigaarch64" : "elf64-bigaarch64";
   else
@@ -7671,6 +7676,8 @@ struct aarch64_cpu_option_table
    recognized by GCC.  */
 static const struct aarch64_cpu_option_table aarch64_cpus[] = {
   {"all", AARCH64_ANY, NULL},
+  {"cortex-a35", AARCH64_FEATURE (AARCH64_ARCH_V8,
+				  AARCH64_FEATURE_CRC), "Cortex-A35"},
   {"cortex-a53", AARCH64_FEATURE (AARCH64_ARCH_V8,
 				  AARCH64_FEATURE_CRC), "Cortex-A53"},
   {"cortex-a57", AARCH64_FEATURE (AARCH64_ARCH_V8,
@@ -7680,6 +7687,9 @@ static const struct aarch64_cpu_option_table aarch64_cpus[] = {
   {"exynos-m1", AARCH64_FEATURE (AARCH64_ARCH_V8,
 				 AARCH64_FEATURE_CRC | AARCH64_FEATURE_CRYPTO),
 				"Samsung Exynos M1"},
+  {"qdf24xx", AARCH64_FEATURE (AARCH64_ARCH_V8,
+			       AARCH64_FEATURE_CRC | AARCH64_FEATURE_CRYPTO),
+   "Qualcomm QDF24XX"},
   {"thunderx", AARCH64_FEATURE (AARCH64_ARCH_V8,
 				AARCH64_FEATURE_CRC | AARCH64_FEATURE_CRYPTO),
    "Cavium ThunderX"},
@@ -7707,6 +7717,7 @@ static const struct aarch64_arch_option_table aarch64_archs[] = {
   {"all", AARCH64_ANY},
   {"armv8-a", AARCH64_ARCH_V8},
   {"armv8.1-a", AARCH64_ARCH_V8_1},
+  {"armv8.2-a", AARCH64_ARCH_V8_2},
   {NULL, AARCH64_ARCH_NONE}
 };
 
@@ -7727,6 +7738,8 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"lor",		AARCH64_FEATURE (AARCH64_FEATURE_LOR, 0)},
   {"rdma",		AARCH64_FEATURE (AARCH64_FEATURE_SIMD
 					 | AARCH64_FEATURE_RDMA, 0)},
+  {"fp16",		AARCH64_FEATURE (AARCH64_FEATURE_F16
+					 | AARCH64_FEATURE_FP, 0)},
   {NULL,		AARCH64_ARCH_NONE}
 };
 

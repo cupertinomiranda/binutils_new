@@ -3602,10 +3602,12 @@ class Target_mips : public Sized_target<size, big_endian>
              unsigned int shndx, Output_section* output_section,
              Symbol* sym, const elfcpp::Rel<size, big_endian>& reloc)
   {
+    unsigned int r_type = elfcpp::elf_r_type<size>(reloc.get_r_info());
     this->copy_relocs_.copy_reloc(symtab, layout,
                                   symtab->get_sized_symbol<size>(sym),
                                   object, shndx, output_section,
-                                  reloc, this->rel_dyn_section(layout));
+				  r_type, reloc.get_r_offset(), 0,
+                                  this->rel_dyn_section(layout));
   }
 
   void
@@ -10490,7 +10492,8 @@ const Target::Target_info Target_mips<size, big_endian>::mips_info =
   0,                    // large_common_section_flags
   NULL,                 // attributes_section
   NULL,                 // attributes_vendor
-  "__start"		// entry_symbol_name
+  "__start",		// entry_symbol_name
+  32,			// hash_entry_size
 };
 
 template<int size, bool big_endian>
@@ -10529,7 +10532,8 @@ const Target::Target_info Target_mips_nacl<size, big_endian>::mips_nacl_info =
   0,                    // large_common_section_flags
   NULL,                 // attributes_section
   NULL,                 // attributes_vendor
-  "_start"              // entry_symbol_name
+  "_start",             // entry_symbol_name
+  32,			// hash_entry_size
 };
 
 // Target selector for Mips.  Note this is never instantiated directly.

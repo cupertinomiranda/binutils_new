@@ -63,6 +63,7 @@
 #include "solist.h"
 #include "event-loop.h"
 #include "thread-fsm.h"
+#include "common/enum-flags.h"
 
 /* Prototypes for local functions */
 
@@ -386,11 +387,6 @@ show_stop_on_solib_events (struct ui_file *file, int from_tty,
   fprintf_filtered (file, _("Stopping for shared library events is %s.\n"),
 		    value);
 }
-
-/* Nonzero means expecting a trace trap
-   and should stop the inferior and return silently when it happens.  */
-
-int stop_after_trap;
 
 /* Nonzero after stop if current stack frame should be printed.  */
 
@@ -1274,7 +1270,7 @@ struct thread_info *step_over_queue_head;
 
 /* Bit flags indicating what the thread needs to step over.  */
 
-enum step_over_what
+enum step_over_what_flag
   {
     /* Step over a breakpoint.  */
     STEP_OVER_BREAKPOINT = 1,
@@ -1284,6 +1280,7 @@ enum step_over_what
        expression.  */
     STEP_OVER_WATCHPOINT = 2
   };
+DEF_ENUM_FLAGS_TYPE (enum step_over_what_flag, step_over_what);
 
 /* Info about an instruction that is being stepped over.  */
 
@@ -1541,6 +1538,21 @@ displaced_step_in_progress_any_inferior (void)
   return 0;
 }
 
+/* Return true if thread represented by PTID is doing a displaced
+   step.  */
+
+static int
+displaced_step_in_progress_thread (ptid_t ptid)
+{
+  struct displaced_step_inferior_state *displaced;
+
+  gdb_assert (!ptid_equal (ptid, null_ptid));
+
+  displaced = get_displaced_stepping_state (ptid_get_pid (ptid));
+
+  return (displaced != NULL && ptid_equal (displaced->step_ptid, ptid));
+}
+
 /* Return true if process PID has a thread doing a displaced step.  */
 
 static int
@@ -1734,6 +1746,7 @@ displaced_step_prepare_throw (ptid_t ptid)
   struct thread_info *tp = find_thread_ptid (ptid);
   struct regcache *regcache = get_thread_regcache (ptid);
   struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct address_space *aspace = get_regcache_aspace (regcache);
   CORE_ADDR original, copy;
   ULONGEST len;
   struct displaced_step_closure *closure;
@@ -1788,6 +1801,28 @@ displaced_step_prepare_throw (ptid_t ptid)
 
   copy = gdbarch_displaced_step_location (gdbarch);
   len = gdbarch_max_insn_length (gdbarch);
+
+  if (breakpoint_in_range_p (aspace, copy, len))
+    {
+      /* There's a breakpoint set in the scratch pad location range
+	 (which is usually around the entry point).  We'd either
+	 install it before resuming, which would overwrite/corrupt the
+	 scratch pad, or if it was already inserted, this displaced
+	 step would overwrite it.  The latter is OK in the sense that
+	 we already assume that no thread is going to execute the code
+	 in the scratch pad range (after initial startup) anyway, but
+	 the former is unacceptable.  Simply punt and fallback to
+	 stepping over this breakpoint in-line.  */
+      if (debug_displaced)
+	{
+	  fprintf_unfiltered (gdb_stdlog,
+			      "displaced: breakpoint set in scratch pad.  "
+			      "Stepping over breakpoint in-line instead.\n");
+	}
+
+      do_cleanups (old_cleanups);
+      return -1;
+    }
 
   /* Save the original contents of the copy area.  */
   displaced->step_saved_copy = (gdb_byte *) xmalloc (len);
@@ -2016,7 +2051,7 @@ reset_ecs (struct execution_control_state *ecs, struct thread_info *tp)
 static void keep_going_pass_signal (struct execution_control_state *ecs);
 static void prepare_to_wait (struct execution_control_state *ecs);
 static int keep_going_stepped_thread (struct thread_info *tp);
-static int thread_still_needs_step_over (struct thread_info *tp);
+static step_over_what thread_still_needs_step_over (struct thread_info *tp);
 static void stop_all_threads (void);
 
 /* Are there any pending step-over requests?  If so, run all we can
@@ -2036,7 +2071,7 @@ start_step_over (void)
     {
       struct execution_control_state ecss;
       struct execution_control_state *ecs = &ecss;
-      enum step_over_what step_what;
+      step_over_what step_what;
       int must_be_in_line;
 
       next = thread_step_over_chain_next (tp);
@@ -2621,14 +2656,17 @@ resume (enum gdb_signal sig)
   gdb_assert (!(thread_has_single_step_breakpoints_set (tp) && step));
 
   /* Decide the set of threads to ask the target to resume.  */
-  if ((step || thread_has_single_step_breakpoints_set (tp))
-      && tp->control.trap_expected)
+  if (tp->control.trap_expected)
     {
       /* We're allowing a thread to run past a breakpoint it has
-	 hit, by single-stepping the thread with the breakpoint
-	 removed.  In which case, we need to single-step only this
-	 thread, and keep others stopped, as they can miss this
-	 breakpoint if allowed to run.  */
+	 hit, either by single-stepping the thread with the breakpoint
+	 removed, or by displaced stepping, with the breakpoint inserted.
+	 In the former case, we need to single-step only this thread,
+	 and keep others stopped, as they can miss this breakpoint if
+	 allowed to run.  That's not really a problem for displaced
+	 stepping, but, we still keep other threads stopped, in case
+	 another thread is also stopped for a breakpoint waiting for
+	 its turn in the displaced stepping queue.  */
       resume_ptid = inferior_ptid;
     }
   else
@@ -2857,8 +2895,6 @@ clear_proceed_status (int step)
       inferior->control.stop_soon = NO_STOP_QUIETLY;
     }
 
-  stop_after_trap = 0;
-
   observer_notify_about_to_proceed ();
 }
 
@@ -2888,11 +2924,11 @@ thread_still_needs_step_over_bp (struct thread_info *tp)
    to make progress when resumed.  Returns an bitwise or of enum
    step_over_what bits, indicating what needs to be stepped over.  */
 
-static int
+static step_over_what
 thread_still_needs_step_over (struct thread_info *tp)
 {
   struct inferior *inf = find_inferior_ptid (tp->ptid);
-  int what = 0;
+  step_over_what what = 0;
 
   if (thread_still_needs_step_over_bp (tp))
     what |= STEP_OVER_BREAKPOINT;
@@ -4930,12 +4966,10 @@ Cannot fill $_exitsignal with the correct signal number.\n"));
       {
 	struct regcache *regcache = get_thread_regcache (ecs->ptid);
 	struct gdbarch *gdbarch = get_regcache_arch (regcache);
-	struct displaced_step_inferior_state *displaced
-	  = get_displaced_stepping_state (ptid_get_pid (ecs->ptid));
 
 	/* If checking displaced stepping is supported, and thread
 	   ecs->ptid is displaced stepping.  */
-	if (displaced && ptid_equal (displaced->step_ptid, ecs->ptid))
+	if (displaced_step_in_progress_thread (ecs->ptid))
 	  {
 	    struct inferior *parent_inf
 	      = find_inferior_ptid (ecs->ptid);
@@ -4954,6 +4988,9 @@ Cannot fill $_exitsignal with the correct signal number.\n"));
 
 	    if (ecs->ws.kind == TARGET_WAITKIND_FORKED)
 	      {
+		struct displaced_step_inferior_state *displaced
+		  = get_displaced_stepping_state (ptid_get_pid (ecs->ptid));
+
 		/* Restore scratch pad for child process.  */
 		displaced_step_restore (displaced, ecs->ws.value.related_pid);
 	      }
@@ -5496,18 +5533,6 @@ handle_signal_stop (struct execution_control_state *ecs)
       if (debug_infrun)
 	fprintf_unfiltered (gdb_stdlog, "infrun: quietly stopped\n");
       stop_print_frame = 1;
-      stop_waiting (ecs);
-      return;
-    }
-
-  if (ecs->event_thread->suspend.stop_signal == GDB_SIGNAL_TRAP
-      && stop_after_trap)
-    {
-      if (!ptid_equal (ecs->ptid, inferior_ptid))
-	context_switch (ecs->ptid);
-      if (debug_infrun)
-	fprintf_unfiltered (gdb_stdlog, "infrun: stopped\n");
-      stop_print_frame = 0;
       stop_waiting (ecs);
       return;
     }
@@ -7555,7 +7580,7 @@ keep_going_pass_signal (struct execution_control_state *ecs)
       struct regcache *regcache = get_current_regcache ();
       int remove_bp;
       int remove_wps;
-      enum step_over_what step_what;
+      step_over_what step_what;
 
       /* Either the trap was not expected, but we are continuing
 	 anyway (if we got a signal, the user asked it be passed to
@@ -8776,7 +8801,6 @@ struct infcall_control_state
   /* Other fields:  */
   enum stop_stack_kind stop_stack_dummy;
   int stopped_by_random_signal;
-  int stop_after_trap;
 
   /* ID if the selected frame when the inferior function call was made.  */
   struct frame_id selected_frame_id;
@@ -8808,7 +8832,6 @@ save_infcall_control_state (void)
   /* Other fields:  */
   inf_status->stop_stack_dummy = stop_stack_dummy;
   inf_status->stopped_by_random_signal = stopped_by_random_signal;
-  inf_status->stop_after_trap = stop_after_trap;
 
   inf_status->selected_frame_id = get_frame_id (get_selected_frame (NULL));
 
@@ -8860,7 +8883,6 @@ restore_infcall_control_state (struct infcall_control_state *inf_status)
   /* Other fields:  */
   stop_stack_dummy = inf_status->stop_stack_dummy;
   stopped_by_random_signal = inf_status->stopped_by_random_signal;
-  stop_after_trap = inf_status->stop_after_trap;
 
   if (target_has_stack)
     {

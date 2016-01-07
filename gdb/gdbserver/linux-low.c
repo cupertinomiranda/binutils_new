@@ -70,16 +70,6 @@
 #define O_LARGEFILE 0
 #endif
 
-#ifndef W_STOPCODE
-#define W_STOPCODE(sig) ((sig) << 8 | 0x7f)
-#endif
-
-/* This is the kernel's hard limit.  Not to be confused with
-   SIGRTMIN.  */
-#ifndef __SIGRTMIN
-#define __SIGRTMIN 32
-#endif
-
 /* Some targets did not define these ptrace constants from the start,
    so gdbserver defines them locally here.  In the future, these may
    be removed after they are added to asm/ptrace.h.  */
@@ -3012,7 +3002,12 @@ linux_wait_1 (ptid_t ptid,
   if (!ptid_equal (step_over_bkpt, null_ptid)
       && event_child->stop_reason == TARGET_STOPPED_BY_SW_BREAKPOINT)
     {
-      unsigned int increment_pc = the_low_target.breakpoint_len;
+      int increment_pc = 0;
+      int breakpoint_kind = 0;
+      CORE_ADDR stop_pc = event_child->stop_pc;
+
+      breakpoint_kind = the_target->breakpoint_kind_from_pc (&stop_pc);
+      the_target->sw_breakpoint_from_kind (breakpoint_kind, &increment_pc);
 
       if (debug_threads)
 	{
@@ -6133,10 +6128,10 @@ linux_read_loadmap (const char *annex, CORE_ADDR offset,
 #endif /* defined PT_GETDSBT || defined PTRACE_GETFDPIC */
 
 static void
-linux_process_qsupported (const char *query)
+linux_process_qsupported (char **features, int count)
 {
   if (the_low_target.process_qsupported != NULL)
-    the_low_target.process_qsupported (query);
+    the_low_target.process_qsupported (features, count);
 }
 
 static int
@@ -6820,7 +6815,7 @@ linux_low_encode_raw (struct buffer *buffer, const gdb_byte *data,
 
 static int
 linux_low_read_btrace (struct btrace_target_info *tinfo, struct buffer *buffer,
-		       int type)
+		       enum btrace_read_type type)
 {
   struct btrace_data btrace;
   struct btrace_block *block;
@@ -6932,6 +6927,27 @@ current_lwp_ptid (void)
   return ptid_of (current_thread);
 }
 
+/* Implementation of the target_ops method "breakpoint_kind_from_pc".  */
+
+static int
+linux_breakpoint_kind_from_pc (CORE_ADDR *pcptr)
+{
+  if (the_low_target.breakpoint_kind_from_pc != NULL)
+    return (*the_low_target.breakpoint_kind_from_pc) (pcptr);
+  else
+    return default_breakpoint_kind_from_pc (pcptr);
+}
+
+/* Implementation of the target_ops method "sw_breakpoint_from_kind".  */
+
+static const gdb_byte *
+linux_sw_breakpoint_from_kind (int kind, int *size)
+{
+  gdb_assert (the_low_target.sw_breakpoint_from_kind != NULL);
+
+  return (*the_low_target.sw_breakpoint_from_kind) (kind, size);
+}
+
 static struct target_ops linux_target_ops = {
   linux_create_inferior,
   linux_arch_setup,
@@ -7026,6 +7042,9 @@ static struct target_ops linux_target_ops = {
   linux_mntns_open_cloexec,
   linux_mntns_unlink,
   linux_mntns_readlink,
+  linux_breakpoint_kind_from_pc,
+  linux_sw_breakpoint_from_kind,
+  linux_proc_tid_get_name,
 };
 
 static void
@@ -7053,10 +7072,10 @@ void
 initialize_low (void)
 {
   struct sigaction sigchld_action;
+
   memset (&sigchld_action, 0, sizeof (sigchld_action));
   set_target_ops (&linux_target_ops);
-  set_breakpoint_data (the_low_target.breakpoint,
-		       the_low_target.breakpoint_len);
+
   linux_init_signals ();
   linux_ptrace_init_warnings ();
 

@@ -973,7 +973,24 @@ is_align_conditional (const etree_type *tree)
 	      && is_dot_ne_0 (tree->trinary.cond)
 	      && is_value (tree->trinary.rhs, 1));
     }
-  return 0;
+  return FALSE;
+}
+
+/* Subroutine of exp_fold_tree_1 for copying a symbol type.  */
+
+static void
+try_copy_symbol_type (struct bfd_link_hash_entry * h, etree_type *src)
+{
+  if (src->type.node_class == etree_name)
+    {
+      struct bfd_link_hash_entry *hsrc;
+
+      hsrc = bfd_link_hash_lookup (link_info.hash, src->name.name,
+				    FALSE, FALSE, TRUE);
+      if (hsrc)
+	bfd_copy_link_hash_symbol_type (link_info.output_bfd, h,
+						    hsrc);
+    }
 }
 
 static void
@@ -1109,11 +1126,14 @@ exp_fold_tree_1 (etree_type *tree)
 	      if (h == NULL
 		  || !(h->type == bfd_link_hash_new
 		       || h->type == bfd_link_hash_undefined
+		       || h->type == bfd_link_hash_undefweak
 		       || h->linker_def))
 		{
 		  /* Do nothing.  The symbol was never referenced, or
-		     was defined in some object file.  Undefined weak
-		     symbols stay undefined.  */
+		     was defined in some object file.  Note that
+		     undefweak symbols are defined by PROVIDE.  This
+		     is to support glibc use of __rela_iplt_start and
+		     similar weak references.  */
 		  break;
 		}
 	    }
@@ -1166,18 +1186,25 @@ exp_fold_tree_1 (etree_type *tree)
 		tree->type.node_class = etree_provided;
 
 	      /* Copy the symbol type if this is a simple assignment of
-		 one symbol to another.  This could be more general
-		 (e.g. a ?: operator with NAMEs in each branch).  */
+	         one symbol to another.  Also, handle the case of a foldable
+		 ternary conditional with names on either side.  */
 	      if (tree->assign.src->type.node_class == etree_name)
+		try_copy_symbol_type (h, tree->assign.src);
+	      else if (tree->assign.src->type.node_class == etree_trinary)
 		{
-		  struct bfd_link_hash_entry *hsrc;
+		  exp_fold_tree_1 (tree->assign.src->trinary.cond);
+		  if (expld.result.valid_p)
+		    {
+		      if (expld.result.value
+			  && tree->assign.src->trinary.lhs->type.node_class
+			     == etree_name)
+			try_copy_symbol_type (h, tree->assign.src->trinary.lhs);
 
-		  hsrc = bfd_link_hash_lookup (link_info.hash,
-					       tree->assign.src->name.name,
-					       FALSE, FALSE, TRUE);
-		  if (hsrc)
-		    bfd_copy_link_hash_symbol_type (link_info.output_bfd, h,
-						    hsrc);
+		      if (!expld.result.value
+			  && tree->assign.src->trinary.rhs->type.node_class
+			     == etree_name)
+			try_copy_symbol_type (h, tree->assign.src->trinary.rhs);
+		    }
 		}
 	    }
 	  else if (expld.phase == lang_final_phase_enum)

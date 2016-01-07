@@ -359,6 +359,7 @@ ioscm_make_gdb_stdio_port (int fd)
 {
   int is_a_tty = isatty (fd);
   const char *name;
+  const char *mode_str;
   long mode_bits;
   SCM port;
 
@@ -366,20 +367,21 @@ ioscm_make_gdb_stdio_port (int fd)
     {
     case 0:
       name = input_port_name;
-      mode_bits = scm_mode_bits (is_a_tty ? "r0" : "r");
+      mode_str = is_a_tty ? "r0" : "r";
       break;
     case 1:
       name = output_port_name;
-      mode_bits = scm_mode_bits (is_a_tty ? "w0" : "w");
+      mode_str = is_a_tty ? "w0" : "w";
       break;
     case 2:
       name = error_port_name;
-      mode_bits = scm_mode_bits (is_a_tty ? "w0" : "w");
+      mode_str = is_a_tty ? "w0" : "w";
       break;
     default:
       gdb_assert_not_reached ("bad stdio file descriptor");
     }
 
+  mode_bits = scm_mode_bits ((char *) mode_str);
   port = ioscm_open_port (stdio_port_desc, mode_bits);
 
   scm_set_port_filename_x (port, gdbscm_scm_from_c_string (name));
@@ -716,10 +718,11 @@ gdbscm_memory_port_flush (SCM port)
 /* "write" method for memory ports.  */
 
 static void
-gdbscm_memory_port_write (SCM port, const void *data, size_t size)
+gdbscm_memory_port_write (SCM port, const void *void_data, size_t size)
 {
   scm_t_port *pt = SCM_PTAB_ENTRY (port);
   ioscm_memory_port *iomem = (ioscm_memory_port *) SCM_STREAM (port);
+  const gdb_byte *data = (const gdb_byte *) void_data;
 
   /* There's no way to indicate a short write, so if the request goes past
      the end of the port's memory range, flag an error.  */
@@ -758,7 +761,7 @@ gdbscm_memory_port_write (SCM port, const void *data, size_t size)
 	pt->write_pos = pt->write_end;
 	gdbscm_memory_port_flush (port);
 	{
-	  const void *ptr = ((const char *) data) + space;
+	  const gdb_byte *ptr = data + space;
 	  size_t remaining = size - space;
 
 	  if (remaining >= pt->write_buf_size)
@@ -1136,7 +1139,7 @@ gdbscm_open_memory (SCM rest)
 			      &start_arg_pos, &start,
 			      &size_arg_pos, &size);
 
-  scm_dynwind_begin (0);
+  scm_dynwind_begin ((scm_t_dynwind_flags) 0);
 
   if (mode == NULL)
     mode = xstrdup ("r");

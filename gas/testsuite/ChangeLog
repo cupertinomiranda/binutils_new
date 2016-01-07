@@ -1,3 +1,184 @@
+2015-11-27  Matthew Wahab  <matthew.wahab@arm.com>
+
+	* gas/aarch64/float-fp16.d: New.
+	* gas/aarch64/float-fp16.s: New.
+
+2015-11-27  Matthew Wahab  <matthew.wahab@arm.com>
+
+	* gas/aarch64/alias-2.d: Add tests for REV.
+	* gas/aarch64/alias-2.s: Likewise.
+
+2015-11-27  Matthew Wahab  <matthew.wahab@arm.com>
+
+	* gas/aarch64/alias-2.d: New.
+	* gas/aarch64/alias-2.s: New.
+
+2015-11-27  Matthew Wahab  <matthew.wahab@arm.com>
+
+	* gas/aarch64/sysreg-2.d: New.
+	* gas/aarch64/sysreg-2.s: New.
+
+2015-11-24  Christophe Monat <christophe.monat@st.com>
+
+	* gas/arm/thumb2_ldr_immediate_armv6t2.s: Added high register
+	tests.
+	* gas/arm/thumb2_ldr_immediate_armv6t2.d: Accounted for new test
+	cases.
+	* gas/arm/thumb2_ldr_immediate_highregs_armv6t2.s: New.
+	* gas/arm/thumb2_ldr_immediate_highregs_armv6t2.d: New.
+
+2015-11-24  Matthew Wahab  <matthew.wahab@arm.com>
+
+	* gas/arm/armv7e-m+fpv5-d16.d: Skip test for *-*-pe, *-wince-* and
+	for *-*-coff targets.
+	* gas/arm/armv7e-m+fpv5-sp-d16.d: Likewise.
+	* gas/arm/blx-bl-convert.d: Likewise.
+	* gas/arm/ldst-offset0.d: Likewise.
+	* gas/arm/thumb2_ldr_immediate_armv6t2.d: Likewise.
+	* gas/arm/armv8-a+pan.s: Adjust test to make it
+	valid for non-ELF targets.
+	* gas/arm/wince.d: Add assembler option "-mccs".
+	* gas/arm/wince_inst.d: Update expected output.
+
+2015-11-20  Maciej W. Rozycki  <macro@imgtec.com>
+
+	* gas/mips/nan-legacy-1.d: Remove MIPS ABI flags match patterns.
+	* gas/mips/nan-legacy-2.d: Likewise.
+	* gas/mips/nan-legacy-3.d: Likewise.
+	* gas/mips/nan-legacy-4.d: Likewise.
+	* gas/mips/nan-legacy-5.d: Likewise.
+
+2015-11-20  Matthew Wahab  <matthew.wahab@arm.com>
+
+	* gas/aarch64/virthostext-directive.d: New.
+	* gas/aarch64/virthostext.d: New.
+	* gas/aarch64/virthostext.s: New.
+
+2015-11-20  Matthew Wahab  <matthew.wahab@foss.arm.com>
+
+	* gas/arm/mapshort-elf.d: Fix typo in exclusion list.
+
+2015-11-19  Matthew Wahab  <matthew.wahab@arm.com>
+
+	* gas/aarch64/pan-illegal.d: New.
+	* gas/aarch64/pan-illegal.l: New.
+	* gas/aarch64/pan.s: Add tests for invalid immediates.
+
+2015-11-19  Alan Modra  <amodra@gmail.com>
+
+	* gas/ppc/altivec3.d: Allow for padding at end of section.
+	* gas/testsuite/gas/ppc/power9.d: Likewise.
+
+2015-11-12  Matthew Wahab  <matthew.wahab@arm.com>
+
+	PR gas/19217
+	* gas/arm/thumb2_ldr_immediate_armv6t2.d: Update expected output.
+
+2015-11-11  Alan Modra  <amodra@gmail.com>
+	    Peter Bergner <bergner@vnet.ibm.com>
+
+	* gas/ppc/altivec3.s: New test.
+	* gas/ppc/altivec3.d: Likewise.
+	* gas/ppc/vsx3.s: Likewise.
+	* gas/ppc/vsx3.d: Likewise.
+	* gas/ppc/power9.s: Likewise.
+	* gas/ppc/power9.d: Likewise.
+	* gas/ppc/ppc.exp: Run them.
+	* gas/ppc/power8.s <lxvx, lxvd2x, stxvx, stxvd2x>: Add new tests.
+	* gas/ppc/power8.d: Likewise.
+	* gas/ppc/vsx.s: <lxvx, stxvx>: Rename invalid mnemonics ...
+	<lxvd2x, stxvd2x>: ...to this.
+	* gas/ppc/vsx.d: Likewise.
+
+2015-11-09  Dominik Vogt  <vogt@linux.vnet.ibm.com>
+
+	* gas/all/test-gen.c (random_order_16s, random_order_24s)
+	(random_order_32s): Fix left shift of negative value.
+
+2015-11-02  Nick Clifton  <nickc@redhat.com>
+
+	* gas/rx/max.d: Update expected disassembly.
+	* gas/rx/nod.d: Likewise.
+	* gas/rx/nop.sm: Add tests of more NOP instructions.
+
+2015-11-02  Nick Clifton  <nickc@redhat.com>
+
+	* gas/rx/mov.sm: Add tests for zero offset indirect moves.
+	* gas/rx/mov.d: Update expected output.
+
+2015-10-28  Andre Vieira  <andre.simoesdiasvieira@arm.com>
+
+        * gas/arm/pinsn.s: New.
+        * gas/arm/pinsn.d: Likewise.
+
+2015-10-27  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/19159
+	* gas/rl78/pr19159.s: New test source file.
+	* gas/rl78/pr19159.d: New test case.
+	* gas/rl78/rl78.exp: Run the new test.
+
+2015-10-27  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/19158
+	* gas/rl78/pr19158.s: New test source file.
+	* gas/rl78/pr19158.d: New test case.
+	* gas/rl78/rl78.exp: Run the new test.
+
+2015-10-27  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/19157
+	* gas/rl78: New directory.
+	* gas/rl78/rl78.exp: New test driver.
+	* gas/rl78/pr19157.s: New test source file.
+	* gas/rl78/pr19157.d: New test case.
+
+2015-10-22  Nick Clifton  <nickc@redhat.com>
+
+	* gas/msp430/errata_fixes.s: New test source file.
+	* gas/msp430/errata_fixes.d: New test control file.
+	* gas/msp430/errata_warns.s: New test source file.
+	* gas/msp430/errata_warns.d: New test control file.
+	* gas/msp430/errata_warns.l: New test message file.
+	* gas/msp430/msp430.exp: Run the new tests.
+	* gas/msp430/bad.l: Update expected warning messages
+	* gas/msp430/msp430.exp: Run the new tests.
+
+2015-10-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/i386.exp: Run x86-64-gotpcrel.
+	* gas/i386/x86-64-gotpcrel.d: New file.
+	* gas/i386/x86-64-gotpcrel.s: Likewise.
+	* gas/i386/ilp32/x86-64-gotpcrel.d: Likewise.
+	* gas/i386/x86-64-localpic.d: Replace R_X86_64_GOTPCREL with
+	R_X86_64_REX_GOTPCRELX.
+	* gas/i386/ilp32/x86-64-localpic.d: Likewise.
+
+2015-10-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/got.d: New file.
+	* gas/i386/got.s: Likewise.
+	* gas/i386/i386.exp: Run got.
+	* gas/i386/localpic.d: Replace R_386_GOT32 with R_386_GOT32X.
+	* gas/i386/mixed-mode-reloc32.d: Likewise.
+	* gas/i386/reloc32.d: Likewise.
+
+2015-10-22  Alan Modra  <amodra@gmail.com>
+
+	PR gas/18500
+	* gas/arm/vfpv2-ldr_immediate.d: Use parentheses, not brackets,
+	to select alternatives.
+	* gas/arm/vfpv3-ldr_immediate.d: Likewise.
+	* gas/arm/vfpv3xd-ldr_immediate.d: Likewise.
+
+2015-10-21  Nick Clifton  <nickc@redhat.com>
+
+	PR gas/18500
+	* gas/arm/vfpv3xd-ldr_immediate.d: Update test for big-endian ARM
+	toolchains.
+	* gas/arm/vfpv3-ldr_immediate.d: Likewise.
+	* gas/arm/vfpv2-ldr_immediate.d: Likewise.
+
 2015-10-14  Andreas Krebbel  <krebbel@linux.vnet.ibm.com>
 
 	* gas/s390/esa-g5.d: Use odd GPR for the second operand.

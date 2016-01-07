@@ -35,6 +35,7 @@ static char * target2_type = "${TARGET2_TYPE}";
 static int fix_v4bx = 0;
 static int use_blx = 0;
 static bfd_arm_vfp11_fix vfp11_denorm_fix = BFD_ARM_VFP11_FIX_DEFAULT;
+static bfd_arm_stm32l4xx_fix stm32l4xx_fix = BFD_ARM_STM32L4XX_FIX_NONE;
 static int fix_cortex_a8 = -1;
 static int no_enum_size_warning = 0;
 static int no_wchar_size_warning = 0;
@@ -54,6 +55,19 @@ gld${EMULATION_NAME}_before_parse (void)
 }
 
 static void
+gld${EMULATION_NAME}_set_symbols (void)
+{
+  /* PR 19106: The section resizing code in gldarmelf_after_allocation
+     is effectively the same as relaxation, so prevent early memory
+     region checks which produce bogus error messages.
+     Note - this test has nothing to do with symbols.  It is just here
+     because this is the first emulation routine that is called after
+     the command line has been parsed.  */
+  if (!bfd_link_relocatable (&link_info))
+    TARGET_ENABLE_RELAXATION;
+}
+
+static void
 arm_elf_before_allocation (void)
 {
   bfd_elf32_arm_set_byteswap_code (&link_info, byteswap_code);
@@ -61,6 +75,10 @@ arm_elf_before_allocation (void)
   /* Choose type of VFP11 erratum fix, or warn if specified fix is unnecessary
      due to architecture version.  */
   bfd_elf32_arm_set_vfp11_fix (link_info.output_bfd, &link_info);
+
+  /* Choose type of STM32L4XX erratum fix, or warn if specified fix is
+     unnecessary due to architecture version.  */
+  bfd_elf32_arm_set_stm32l4xx_fix (link_info.output_bfd, &link_info);
 
   /* Auto-select Cortex-A8 erratum fix if it wasn't explicitly specified.  */
   bfd_elf32_arm_set_cortex_a8_fix (link_info.output_bfd, &link_info);
@@ -77,7 +95,9 @@ arm_elf_before_allocation (void)
 
 	  if (!bfd_elf32_arm_process_before_allocation (is->the_bfd,
 							&link_info)
-	      || !bfd_elf32_arm_vfp11_erratum_scan (is->the_bfd, &link_info))
+	      || !bfd_elf32_arm_vfp11_erratum_scan (is->the_bfd, &link_info)
+	      || !bfd_elf32_arm_stm32l4xx_erratum_scan (is->the_bfd,
+							&link_info))
 	    /* xgettext:c-format */
 	    einfo (_("Errors encountered processing file %s"), is->filename);
 	}
@@ -380,6 +400,10 @@ gld${EMULATION_NAME}_finish (void)
         /* Figure out where VFP11 erratum veneers (and the labels returning
            from same) have been placed.  */
         bfd_elf32_arm_vfp11_fix_veneer_locations (is->the_bfd, &link_info);
+
+	 /* Figure out where STM32L4XX erratum veneers (and the labels returning
+	   from them) have been placed.  */
+	bfd_elf32_arm_stm32l4xx_fix_veneer_locations (is->the_bfd, &link_info);
       }
   }
 
@@ -468,7 +492,8 @@ arm_elf_create_output_section_statements (void)
   bfd_elf32_arm_set_target_relocs (link_info.output_bfd, &link_info,
 				   target1_is_rel,
 				   target2_type, fix_v4bx, use_blx,
-				   vfp11_denorm_fix, no_enum_size_warning,
+				   vfp11_denorm_fix, stm32l4xx_fix,
+				   no_enum_size_warning,
 				   no_wchar_size_warning,
 				   pic_veneer, fix_cortex_a8,
 				   fix_arm1176);
@@ -539,6 +564,7 @@ PARSE_AND_LIST_PROLOGUE='
 #define OPTION_FIX_ARM1176		317
 #define OPTION_NO_FIX_ARM1176		318
 #define OPTION_LONG_PLT			319
+#define OPTION_STM32L4XX_FIX		320
 '
 
 PARSE_AND_LIST_SHORTOPTS=p
@@ -554,6 +580,7 @@ PARSE_AND_LIST_LONGOPTS='
   { "fix-v4bx-interworking", no_argument, NULL, OPTION_FIX_V4BX_INTERWORKING},
   { "use-blx", no_argument, NULL, OPTION_USE_BLX},
   { "vfp11-denorm-fix", required_argument, NULL, OPTION_VFP11_DENORM_FIX},
+  { "fix-stm32l4xx-629360", optional_argument, NULL, OPTION_STM32L4XX_FIX},
   { "no-enum-size-warning", no_argument, NULL, OPTION_NO_ENUM_SIZE_WARNING},
   { "pic-veneer", no_argument, NULL, OPTION_PIC_VENEER},
   { "stub-group-size", required_argument, NULL, OPTION_STUBGROUP_SIZE },
@@ -576,6 +603,7 @@ PARSE_AND_LIST_OPTIONS='
   fprintf (file, _("  --fix-v4bx-interworking     Rewrite BX rn branch to ARMv4 interworking veneer\n"));
   fprintf (file, _("  --use-blx                   Enable use of BLX instructions\n"));
   fprintf (file, _("  --vfp11-denorm-fix          Specify how to fix VFP11 denorm erratum\n"));
+  fprintf (file, _("  --fix-stm32l4xx-629360      Specify how to fix STM32L4XX 629360 erratum\n"));
   fprintf (file, _("  --no-enum-size-warning      Don'\''t warn about objects with incompatible\n"
 		   "                                enum sizes\n"));
   fprintf (file, _("  --no-wchar-size-warning     Don'\''t warn about objects with incompatible\n"
@@ -645,6 +673,19 @@ PARSE_AND_LIST_ARGS_CASES='
         einfo (_("Unrecognized VFP11 fix type '\''%s'\''.\n"), optarg);
       break;
 
+    case OPTION_STM32L4XX_FIX:
+      if (!optarg)
+        stm32l4xx_fix = BFD_ARM_STM32L4XX_FIX_DEFAULT;
+      else if (strcmp (optarg, "none") == 0)
+        stm32l4xx_fix = BFD_ARM_STM32L4XX_FIX_NONE;
+      else if (strcmp (optarg, "default") == 0)
+        stm32l4xx_fix = BFD_ARM_STM32L4XX_FIX_DEFAULT;
+      else if (strcmp (optarg, "all") == 0)
+        stm32l4xx_fix = BFD_ARM_STM32L4XX_FIX_ALL;
+      else
+        einfo (_("Unrecognized STM32L4XX fix type '\''%s'\''.\n"), optarg);
+      break;
+
     case OPTION_NO_ENUM_SIZE_WARNING:
       no_enum_size_warning = 1;
       break;
@@ -700,6 +741,7 @@ LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=arm_elf_create_output_section_statements
 
 # Replace the elf before_parse function with our own.
 LDEMUL_BEFORE_PARSE=gld"${EMULATION_NAME}"_before_parse
+LDEMUL_SET_SYMBOLS=gld"${EMULATION_NAME}"_set_symbols
 
 # Call the extra arm-elf function
 LDEMUL_FINISH=gld${EMULATION_NAME}_finish

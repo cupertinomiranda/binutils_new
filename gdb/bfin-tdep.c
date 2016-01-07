@@ -531,7 +531,7 @@ bfin_push_dummy_call (struct gdbarch *gdbarch,
       int container_len = (TYPE_LENGTH (value_type) + 3) & ~3;
 
       sp -= container_len;
-      write_memory (sp, value_contents_writeable (args[i]), container_len);
+      write_memory (sp, value_contents (args[i]), container_len);
     }
 
   /* Initialize R0, R1, and R2 to the first 3 words of parameters.  */
@@ -566,8 +566,8 @@ bfin_push_dummy_call (struct gdbarch *gdbarch,
 static int
 bfin_reg_to_regnum (struct gdbarch *gdbarch, int reg)
 {
-  if (reg > ARRAY_SIZE (map_gcc_gdb))
-    return 0;
+  if (reg < 0 || reg >= ARRAY_SIZE (map_gcc_gdb))
+    return -1;
 
   return map_gcc_gdb[reg];
 }

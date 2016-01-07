@@ -24,6 +24,10 @@
 
 * GDB now supports displaced stepping on AArch64 GNU/Linux.
 
+* "info threads", "info inferiors", "info display", "info checkpoints"
+  and "maint info program-spaces" now list the corresponding items in
+  ascending ID order, for consistency with all other "info" commands.
+
 * New commands
 
 maint set target-non-stop (on|off|auto)
@@ -50,6 +54,9 @@ show remote multiprocess-extensions-packet
   - and source for all relevant files is now printed.
   The "/m" option is now considered deprecated: its "source-centric"
   output hasn't proved useful in practice.
+
+* The "record instruction-history" command accepts a new modifier: /s.
+  It behaves exactly like /m and prints mixed source+disassembly.
 
 * The "set scheduler-locking" command supports a new mode "replay".
   It behaves like "off" in record mode and like "on" in replay mode.
@@ -86,6 +93,11 @@ exec-events feature in qSupported
 set remote exec-event-feature-packet
 show remote exec-event-feature-packet
   Set/show the use of the remote exec event feature.
+
+ * Thread names in remote protocol
+
+   The reply to qXfer:threads:read may now include a name attribute for each
+   thread.
 
 *** Changes in GDB 7.10
 

@@ -2676,6 +2676,8 @@ ENUMX
   BFD_RELOC_386_TLS_DESC
 ENUMX
   BFD_RELOC_386_IRELATIVE
+ENUMX
+  BFD_RELOC_386_GOT32X
 ENUMDOC
   i386/elf relocations
 
@@ -2737,6 +2739,10 @@ ENUMX
   BFD_RELOC_X86_64_PC32_BND
 ENUMX
   BFD_RELOC_X86_64_PLT32_BND
+ENUMX
+  BFD_RELOC_X86_64_GOTPCRELX
+ENUMX
+  BFD_RELOC_X86_64_REX_GOTPCRELX
 ENUMDOC
   x86-64/elf relocations
 
@@ -2883,6 +2889,8 @@ ENUMX
   BFD_RELOC_PPC_VLE_SDAREL_HA16A
 ENUMX
   BFD_RELOC_PPC_VLE_SDAREL_HA16D
+ENUMX
+  BFD_RELOC_PPC_REL16DX_HA
 ENUMX
   BFD_RELOC_PPC64_HIGHER
 ENUMX
@@ -6584,6 +6592,14 @@ ENUM
   BFD_RELOC_MACH_O_PAIR
 ENUMDOC
   Pair of relocation.  Contains the first symbol.
+ENUM
+  BFD_RELOC_MACH_O_SUBTRACTOR32
+ENUMDOC
+  Symbol will be substracted.  Must be followed by a BFD_RELOC_32.
+ENUM
+  BFD_RELOC_MACH_O_SUBTRACTOR64
+ENUMDOC
+  Symbol will be substracted.  Must be followed by a BFD_RELOC_64.
 
 ENUM
   BFD_RELOC_MACH_O_X86_64_BRANCH32
@@ -6602,14 +6618,6 @@ ENUMDOC
   Used when loading a GOT entry with movq.  It is specially marked so that
   the linker could optimize the movq to a leaq if possible.
 ENUM
-  BFD_RELOC_MACH_O_X86_64_SUBTRACTOR32
-ENUMDOC
-  Symbol will be substracted.  Must be followed by a BFD_RELOC_64.
-ENUM
-  BFD_RELOC_MACH_O_X86_64_SUBTRACTOR64
-ENUMDOC
-  Symbol will be substracted.  Must be followed by a BFD_RELOC_64.
-ENUM
   BFD_RELOC_MACH_O_X86_64_PCREL32_1
 ENUMDOC
   Same as BFD_RELOC_32_PCREL but with an implicit -1 addend.
@@ -6621,6 +6629,24 @@ ENUM
   BFD_RELOC_MACH_O_X86_64_PCREL32_4
 ENUMDOC
   Same as BFD_RELOC_32_PCREL but with an implicit -4 addend.
+
+
+ENUM
+  BFD_RELOC_MACH_O_ARM64_ADDEND
+ENUMDOC
+  Addend for PAGE or PAGEOFF.
+ENUM
+  BFD_RELOC_MACH_O_ARM64_GOT_LOAD_PAGE21
+ENUMDOC
+  Relative offset to page of GOT slot.
+ENUM
+  BFD_RELOC_MACH_O_ARM64_GOT_LOAD_PAGEOFF12
+ENUMDOC
+  Relative offset within page of GOT slot.
+ENUM
+  BFD_RELOC_MACH_O_ARM64_POINTER_TO_GOT
+ENUMDOC
+  Address of a GOT entry.
 
 ENUM
   BFD_RELOC_MICROBLAZE_32_LO

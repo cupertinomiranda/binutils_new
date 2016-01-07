@@ -157,8 +157,7 @@ AC_ARG_ENABLE(werror,
      *) AC_MSG_ERROR(bad value ${enableval} for --enable-werror) ;;
    esac])
 
-# Enable -Werror by default when using gcc in C mode.  Leave it off
-# for C++ until we're warning clean.  Turn it off for releases.
+# Enable -Werror by default when using gcc.  Turn it off for releases.
 if test "${GCC}" = yes -a -z "${ERROR_ON_WARNING}" \
    && test x"$enable_build_with_cxx" != x"yes" \
    && $development; then
@@ -236,9 +235,23 @@ AC_CHECK_TYPES(socklen_t, [], [],
 #include <sys/socket.h>
 ])
 
-AC_CHECK_TYPES([Elf32_auxv_t, Elf64_auxv_t], [], [],
-#include <elf.h>
-)
+case "${target}" in
+  *-android*)
+    # Starting with NDK version 9, <elf.h> actually includes definitions
+    # of Elf32_auxv_t and Elf64_auxv_t. But sadly, <elf.h> includes
+    # <sys/exec_elf.h> which defines some of the ELF types incorrectly,
+    # leading to conflicts with the defintions from <linux/elf.h>.
+    # This makes it impossible for us to include both <elf.h> and
+    # <linux/elf.h>, which means that, in practice, we do not have
+    # access to Elf32_auxv_t and Elf64_auxv_t on this platform.
+    # Therefore, do not try to auto-detect availability, as it would
+    # get it wrong on this platform.
+    ;;
+  *)
+    AC_CHECK_TYPES([Elf32_auxv_t, Elf64_auxv_t], [], [],
+    #include <elf.h>
+    )
+esac
 
 ACX_PKGVERSION([GDB])
 ACX_BUGURL([http://www.gnu.org/software/gdb/bugs/])

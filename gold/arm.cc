@@ -2806,9 +2806,11 @@ class Target_arm : public Sized_target<32, big_endian>
 	     unsigned int shndx, Output_section* output_section,
 	     Symbol* sym, const elfcpp::Rel<32, big_endian>& reloc)
   {
+    unsigned int r_type = elfcpp::elf_r_type<32>(reloc.get_r_info());
     this->copy_relocs_.copy_reloc(symtab, layout,
 				  symtab->get_sized_symbol<32>(sym),
-				  object, shndx, output_section, reloc,
+				  object, shndx, output_section,
+				  r_type, reloc.get_r_offset(), 0,
 				  this->rel_dyn_section(layout));
   }
 
@@ -2997,7 +2999,8 @@ const Target::Target_info Target_arm<big_endian>::arm_info =
   0,			// large_common_section_flags
   ".ARM.attributes",	// attributes_section
   "aeabi",		// attributes_vendor
-  "_start"		// entry_symbol_name
+  "_start",		// entry_symbol_name
+  32,			// hash_entry_size
 };
 
 // Arm relocate functions class
@@ -12744,7 +12747,8 @@ const Target::Target_info Target_arm_nacl<big_endian>::arm_nacl_info =
   0,			// large_common_section_flags
   ".ARM.attributes",	// attributes_section
   "aeabi",		// attributes_vendor
-  "_start"		// entry_symbol_name
+  "_start",		// entry_symbol_name
+  32,			// hash_entry_size
 };
 
 template<bool big_endian>

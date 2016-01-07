@@ -1,3 +1,252 @@
+2015-11-27  Matthew Wahab  <matthew.wahab@arm.com>
+
+	* config/tc-aarch64.c (aarch64_features): Add "fp16".
+	* doc/c-aarch64.texi (Architecture Extensions): Add "fp16".
+
+2015-11-24  Christophe Monat <christophe.monat@st.com>
+
+	* config/tc-arm.c (move_or_literal_pool): Do not transform ldr
+	ri,=imm into movs when ri is a high register in T1.
+
+2015-11-20  Nick Clifton  <nickc@redhat.com>
+
+	* po/fr.po: Updated French translation.
+	* po/uk.po: Updated Ukraninan translation.
+	* po/zh_CN.po: New simplified Chinese translation.
+	* configure.ac (ALL_LINGUAS): Add zh_CN.
+	* configure: Regenerate.
+
+2015-11-19  Matthew Wahab  <matthew.wahab@arm.com>
+
+	* config/tc-arm.c (arm_archs): Add "armv8.2-a".
+	* doc/c-arm.texi (-march): Add "armv8.2-a".
+
+2015-11-19  Matthew Wahab  <matthew.wahab@arm.com>
+
+	* config/tc-aarch64.c (aarch64_archs): Add "armv8.2-a".
+	* doc/c-aarch64.texi (-march): Likewise.
+
+2015-11-19  Alan Modra  <amodra@gmail.com>
+
+	* read.c (output_big_leb128): Describe "sign" parameter.
+
+2015-11-19  Alan Modra  <amodra@gmail.com>
+
+	* config/tc-ppc.h (SUB_SEGMENT_ALIGN): Define only for ELF.
+
+2015-11-16  Mike Frysinger  <vapier@gentoo.org>
+
+	* config/tc-microblaze.c (parse_imm): Add an offsetT cast.
+
+2015-11-13  Tristan Gingold  <gingold@adacore.com>
+
+	* configure: Regenerate.
+
+2015-11-13  Tristan Gingold  <gingold@adacore.com>
+
+	* NEWS: Add marker for 2.26.
+
+2015-11-12  James Greenhalgh  <james.greenhalgh@arm.com>
+
+	* config/tc-aarch64.c (aarch64_cpus): Add cortex-a35.
+	* doc/c-aarch64.texi (-mcpu=): Likewise.
+
+2015-11-12  James Greenhalgh  <james.greenhalgh@arm.com>
+
+	* config/tc-arm.c (arm_cpus): Likewise.
+	* doc/c-arm.texi (-mcpu=): Likewise.
+
+2015-11-12  Matthew Wahab  <matthew.wahab@arm.com>
+
+	PR gas/19217
+	* config/tc-arm.c (move_or_literal_pool): Remove redundant feature
+	check.  Fix some code formatting.  Drop use of MOVT.  Add some
+	comments.
+
+2015-11-11  Alan Modra  <amodra@gmail.com>
+	    Peter Bergner <bergner@vnet.ibm.com>
+
+	* doc/as.texinfo (Target PowerPC): Document -mpower9 and -mpwr9.
+	* doc/c-ppc.texi (PowerPC-Opts):  Likewise.
+	* config/tc-ppc.c (md_show_usage): Likewise.
+	(md_assemble): Handle BFD_RELOC_PPC_REL16DX_HA.
+	(md_apply_fix): Likewise.
+	(ppc_handle_align): Handle power9's group ending nop.
+
+2015-11-09  Jim Wilson  <jim.wilson@linaro.org>
+
+	* config/tc-aarch64.c (aarch64_cpus): Add qdf24xx.
+	* config/tc-arm.c (arm_cpus): Likewise.
+	* doc/c-arm.texi, doc/c-aarch64.texi: Likewise.
+
+2015-11-09  Dominik Vogt  <vogt@linux.vnet.ibm.com>
+
+	* read.c (parse_bitfield_cons): Fix left shift of negative value.
+	* config/tc-xstormy16.c (md_section_align): Likewise.
+	* config/tc-xgate.c (md_section_align): Likewise.
+	* config/tc-visium.c (md_section_align): Likewise.
+	* config/tc-v850.c (md_section_align): Likewise.
+	* config/tc-tic6x.c (md_section_align): Likewise.
+	* config/tc-sh.c (SH64PCREL32_M, SH64PCREL48_M, SH64PCREL32_M)
+	(MOVI_32_M, MOVI_48_M, MOVI_32_M, md_section_align): Likewise.
+	* config/tc-sh64.c (shmedia_md_estimate_size_before_relax): Likewise.
+	* config/tc-score.c (s3_section_align): Likewise.
+	* config/tc-score7.c (s7_section_align): Likewise.
+	* config/tc-s390.c (md_section_align): Likewise.
+	* config/tc-rx.c (md_section_align): Likewise.
+	* config/tc-rl78.c (md_section_align): Likewise.
+	* config/tc-ppc.c (md_section_align): Likewise.
+	* config/tc-or1k.c (md_section_align): Likewise.
+	* config/tc-nds32.c (md_section_align): Likewise.
+	* config/tc-mt.c (md_section_align): Likewise.
+	* config/tc-msp430.c (md_section_align): Likewise.
+	* config/tc-mn10300.c (md_section_align): Likewise.
+	* config/tc-mn10200.c (md_section_align): Likewise.
+	* config/tc-mips.c (md_section_align): Likewise.
+	* config/tc-microblaze.c (parse_imm): Likewise.
+	* config/tc-mep.c (md_section_align): Likewise.
+	* config/tc-m68k.c (md_section_align): Likewise.
+	* config/tc-m68hc11.c (md_section_align): Likewise.
+	* config/tc-m32r.c (md_section_align): Likewise.
+	* config/tc-m32c.c (md_section_align): Likewise.
+	* config/tc-lm32.c (md_section_align): Likewise.
+	* config/tc-iq2000.c (md_section_align): Likewise.
+	* config/tc-ip2k.c (md_section_align): Likewise.
+	* config/tc-ia64.c (dot_save, dot_vframe): Likewise.
+	* config/tc-i960.c (md_number_to_field, md_section_align): Likewise.
+	* config/tc-i386.c (md_section_align): Likewise.
+	* config/tc-i370.c (md_section_align): Likewise.
+	* config/tc-frv.c (md_section_align): Likewise.
+	* config/tc-fr30.c (md_section_align): Likewise.
+	* config/tc-epiphany.c (md_section_align): Likewise.
+	* config/tc-d30v.c (md_section_align): Likewise.
+	* config/tc-d10v.c (md_section_align): Likewise.
+	* config/tc-cr16.c (l_cons): Likewise.
+	* config/tc-bfin.c (md_section_align): Likewise.
+	* config/tc-arm.c (md_section_align): Likewise.
+	* config/tc-arc.c (md_section_align): Likewise.
+	* config/bfin-parse.y (expr_1): Likewise.
+
+2015-11-02  Nick Clifton  <nickc@redhat.com>
+
+	* config/rx-parse.y: Allow zero value for 5-bit displacements.
+
+2015-11-02  Nick Clifton  <nickc@redhat.com>
+
+	* config/tc-rx.c (parse_rx_section): Align parameter provides a
+	multiple of n argument, not a power of n argument.
+
+2015-10-29  Nick Clifton  <nickc@redhat.com>
+
+	* config/tc-aarch64.c (elf64_aarch64_target_format): Select the
+	cloudabi format if the TARGET_OS is cloudabi.
+
+2015-10-29  Thomas Preud'homme  <thomas.preudhomme@arm.com>
+
+	* config/tc-arm.c (insns): Guard cps by arm_ext_v6_notm instead of
+	arm_ext_v6_dsp.
+
+2015-10-28  Claudiu Zissulescu  <claziss@synopsys.com>
+
+	* config/tc-arc.c (tokenize_arguments): Avoid creating unused
+	symbols when parsing relocation types.
+	(md_apply_fix): Handle TLS relocations. Fix BFD_RELOC_ARC_32_PCREL
+	relocation.
+	(arc_check_reloc): Emit BFD_RELOC_ARC_32_PCREL relocation.
+
+2015-10-27  Jim Wilson  <jim.wilson@linaro.org>
+
+	* config/tc-arm.c (selected_cpu_name): Increase length of array to
+	accomodate "Samsung Exynos M1".
+	(arm_parse_cpu): Add assertion and length check to prevent
+	overfilling selected_cpu_name.
+
+2015-10-22  Nick Clifton  <nickc@redhat.com>
+
+	* config/tc-msp430.c (PUSH_1X_WORKAROUND): Delete.
+	(OPTION_SILICON_ERRATA): Define.
+	(OPTION_SILICON_WARN): Define.
+	(md_parse_opton): Handle silicon errata options.
+	(md_longopts): Add silicon errata options.
+	(ms_show_usage): Report silicon errata options.
+	(msp430_srcoperand): Handle silicon errata.
+	(msp430_operands): Likewise. Improve nop insertion.
+	(msp430_fix_adjustable): Update warning generation.
+	* doc/c-msp430.texi: Document silicon errata options.
+
+2015-10-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* configure.ac: Properly check
+	--enable-compressed-debug-sections={yes,all}.
+	* configure: Regenerated.
+
+2015-10-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/19109
+	* configure.ac: Handle --enable-compressed-debug-sections=*,gas,*.
+	* configure: Regenerated.
+
+2015-10-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-i386.c (tc_i386_fix_adjustable): Handle
+	BFD_RELOC_X86_64_GOTPCRELX and BFD_RELOC_X86_64_REX_GOTPCRELX.
+	(tc_gen_reloc): Likewise.
+	(i386_validate_fix): Generate BFD_RELOC_X86_64_GOTPCRELX or
+	BFD_RELOC_X86_64_REX_GOTPCRELX if fx_tcbit2 is set.
+	* config/tc-i386.h (TC_FORCE_RELOCATION_LOCAL): Also return
+	true for BFD_RELOC_X86_64_GOTPCRELX and
+	BFD_RELOC_X86_64_REX_GOTPCRELX.
+
+2015-10-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-i386.c (tc_i386_fix_adjustable): Handle
+	BFD_RELOC_386_GOT32X.
+	(tc_gen_reloc): Likewise.
+	(match_template): Force 0x8b encoding for "mov foo@GOT, %eax".
+	(output_disp): Check for "call/jmp *mem", "mov mem, %reg",
+	"test %reg, mem" and "binop mem, %reg" where binop is one of
+	adc, add, and, cmp, or, sbb, sub, xor instructions.  Set
+	fx_tcbit if the REX prefix is generated.  Set fx_tcbit2 if
+	BFD_RELOC_386_GOT32X should be generated.
+	(i386_validate_fix): Generate BFD_RELOC_386_GOT32X if fx_tcbit2
+	is set.
+
+2015-10-21  Nick Clifton  <nickc@redhat.com>
+
+	PR gas/19109
+	* configure.ac: Restore --enable-compressed-debug-sections, with
+	options of all, none or gas.
+	Do not enable compressed debug sections by default for x86 Linux
+	targets.
+	* configure: Regenerate.
+
+2015-10-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/19109
+	* NEWS: Update --enable-compressed-debug-sections=.
+	* configure.ac: Remove --enable-compressed-debug-sections.
+	(DEFAULT_FLAG_COMPRESS_DEBUG): Check
+	--enable-compressed-debug-sections={all,gas} instead of
+	--enable-compressed-debug-sections.  For x86 Linux targets,
+	default to compressing debug sections.
+	* configure: Regenerated.
+
+2015-10-19  Nick Clifton  <nickc@redhat.com>
+
+	PR gas/19109
+	* configure.ac: Add option --enable-compressed-debug-sections.
+	This sets the default behaviour for compressing debug sections.
+	* as.c (flag_compress_debug): Define and initialise to
+	COMPRESS_DEBUG_GABI_ZLIB if DEFAULT_COMPRESS_DEBUG is set.
+	(show_usage): Indicate whether --no-compress-debug-sections
+	or --compress-debug-sections is the default.
+	* config/tc-i386.c (flag_compress_debug): Delete definition.
+	* doc/as.texinfo (--nocompress-debug-sectionas): Update
+	description.
+	* NEWS: Announce the new feature.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+
 2015-10-12  Nick Clifton  <nickc@redhat.com>
 
 	* config/tc-msp430.c (msp430_mcu_names): Rename to

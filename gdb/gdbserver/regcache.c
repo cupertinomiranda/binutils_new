@@ -107,13 +107,23 @@ regcache_invalidate_one (struct inferior_list_entry *entry,
   return 0;
 }
 
+/* See regcache.h.  */
+
+void
+regcache_invalidate_pid (int pid)
+{
+  find_inferior (&all_threads, regcache_invalidate_one, &pid);
+}
+
+/* See regcache.h.  */
+
 void
 regcache_invalidate (void)
 {
   /* Only update the threads of the current process.  */
   int pid = ptid_get_pid (current_thread->entry.id);
 
-  find_inferior (&all_threads, regcache_invalidate_one, &pid);
+  regcache_invalidate_pid (pid);
 }
 
 #endif
@@ -314,6 +324,14 @@ int
 register_size (const struct target_desc *tdesc, int n)
 {
   return tdesc->reg_defs[n].size / 8;
+}
+
+/* See common/common-regcache.h.  */
+
+int
+regcache_register_size (const struct regcache *regcache, int n)
+{
+  return register_size (regcache->tdesc, n);
 }
 
 static unsigned char *

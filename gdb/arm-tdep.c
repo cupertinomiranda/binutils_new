@@ -45,6 +45,7 @@
 #include "user-regs.h"
 #include "observer.h"
 
+#include "arch/arm.h"
 #include "arm-tdep.h"
 #include "gdb/sim-arm.h"
 
@@ -235,8 +236,6 @@ static void arm_neon_quad_write (struct gdbarch *gdbarch,
 				 struct regcache *regcache,
 				 int regnum, const gdb_byte *buf);
 
-static int thumb_insn_size (unsigned short inst1);
-
 struct arm_prologue_cache
 {
   /* The stack pointer at the time this frame was created; i.e. the
@@ -266,12 +265,6 @@ static CORE_ADDR arm_analyze_prologue (struct gdbarch *gdbarch,
    certain instructions, and really should not be hard-wired.  */
 
 #define DISPLACED_STEPPING_ARCH_VERSION		5
-
-/* Addresses for calling Thumb functions have the bit 0 set.
-   Here are some macros to test, set, or clear bit 0 of addresses.  */
-#define IS_THUMB_ADDR(addr)	((addr) & 1)
-#define MAKE_THUMB_ADDR(addr)	((addr) | 1)
-#define UNMAKE_THUMB_ADDR(addr) ((addr) & ~1)
 
 /* Set to true if the 32-bit mode is in use.  */
 
@@ -2226,7 +2219,7 @@ arm_exidx_new_objfile (struct objfile *objfile)
   cleanups = make_cleanup (null_cleanup, NULL);
 
   /* Read contents of exception table and index.  */
-  exidx = bfd_get_section_by_name (objfile->obfd, ".ARM.exidx");
+  exidx = bfd_get_section_by_name (objfile->obfd, ELF_STRING_ARM_unwind);
   if (exidx)
     {
       exidx_vma = bfd_section_vma (objfile->obfd, exidx);
@@ -2821,26 +2814,37 @@ arm_exidx_unwind_sniffer (const struct frame_unwind *self,
 
       /* We also assume exception information is valid if we're currently
 	 blocked in a system call.  The system library is supposed to
-	 ensure this, so that e.g. pthread cancellation works.  */
-      if (arm_frame_is_thumb (this_frame))
-	{
-	  LONGEST insn;
+	 ensure this, so that e.g. pthread cancellation works.
 
-	  if (safe_read_memory_integer (get_frame_pc (this_frame) - 2, 2,
-					byte_order_for_code, &insn)
-	      && (insn & 0xff00) == 0xdf00 /* svc */)
-	    exc_valid = 1;
-	}
-      else
-	{
-	  LONGEST insn;
+	 But before verifying the instruction at the point of call, make
+	 sure this_frame is actually making a call (or, said differently,
+	 that it is not the innermost frame).  For that, we compare
+	 this_frame's PC vs this_frame's addr_in_block. If equal, it means
+	 there is no call (otherwise, the PC would be the return address,
+	 which is the instruction after the call).  */
 
-	  if (safe_read_memory_integer (get_frame_pc (this_frame) - 4, 4,
-					byte_order_for_code, &insn)
-	      && (insn & 0x0f000000) == 0x0f000000 /* svc */)
-	    exc_valid = 1;
+      if (get_frame_pc (this_frame) != addr_in_block)
+	{
+	  if (arm_frame_is_thumb (this_frame))
+	    {
+	      LONGEST insn;
+
+	      if (safe_read_memory_integer (get_frame_pc (this_frame) - 2, 2,
+					    byte_order_for_code, &insn)
+		  && (insn & 0xff00) == 0xdf00 /* svc */)
+		exc_valid = 1;
+	    }
+	  else
+	    {
+	      LONGEST insn;
+
+	      if (safe_read_memory_integer (get_frame_pc (this_frame) - 4, 4,
+					    byte_order_for_code, &insn)
+		  && (insn & 0x0f000000) == 0x0f000000 /* svc */)
+		exc_valid = 1;
+	    }
 	}
-	
+
       /* Bail out if we don't know that exception information is valid.  */
       if (!exc_valid)
 	return 0;
@@ -3402,7 +3406,7 @@ struct stack_item
 };
 
 static struct stack_item *
-push_stack_item (struct stack_item *prev, const void *contents, int len)
+push_stack_item (struct stack_item *prev, const gdb_byte *contents, int len)
 {
   struct stack_item *si;
   si = XNEW (struct stack_item);
@@ -3453,8 +3457,18 @@ arm_type_align (struct type *t)
       return TYPE_LENGTH (t);
 
     case TYPE_CODE_ARRAY:
+      if (TYPE_VECTOR (t))
+	{
+	  /* Use the natural alignment for vector types (the same for
+	     scalar type), but the maximum alignment is 64-bit.  */
+	  if (TYPE_LENGTH (t) > 8)
+	    return 8;
+	  else
+	    return TYPE_LENGTH (t);
+	}
+      else
+	return arm_type_align (TYPE_TARGET_TYPE (t));
     case TYPE_CODE_COMPLEX:
-      /* TODO: What about vector types?  */
       return arm_type_align (TYPE_TARGET_TYPE (t));
 
     case TYPE_CODE_STRUCT:
@@ -3601,21 +3615,44 @@ arm_vfp_cprc_sub_candidate (struct type *t,
 
     case TYPE_CODE_ARRAY:
       {
-	int count;
-	unsigned unitlen;
-	count = arm_vfp_cprc_sub_candidate (TYPE_TARGET_TYPE (t), base_type);
-	if (count == -1)
-	  return -1;
-	if (TYPE_LENGTH (t) == 0)
+	if (TYPE_VECTOR (t))
 	  {
-	    gdb_assert (count == 0);
-	    return 0;
+	    /* A 64-bit or 128-bit containerized vector type are VFP
+	       CPRCs.  */
+	    switch (TYPE_LENGTH (t))
+	      {
+	      case 8:
+		if (*base_type == VFP_CPRC_UNKNOWN)
+		  *base_type = VFP_CPRC_VEC64;
+		return 1;
+	      case 16:
+		if (*base_type == VFP_CPRC_UNKNOWN)
+		  *base_type = VFP_CPRC_VEC128;
+		return 1;
+	      default:
+		return -1;
+	      }
 	  }
-	else if (count == 0)
-	  return -1;
-	unitlen = arm_vfp_cprc_unit_length (*base_type);
-	gdb_assert ((TYPE_LENGTH (t) % unitlen) == 0);
-	return TYPE_LENGTH (t) / unitlen;
+	else
+	  {
+	    int count;
+	    unsigned unitlen;
+
+	    count = arm_vfp_cprc_sub_candidate (TYPE_TARGET_TYPE (t),
+						base_type);
+	    if (count == -1)
+	      return -1;
+	    if (TYPE_LENGTH (t) == 0)
+	      {
+		gdb_assert (count == 0);
+		return 0;
+	      }
+	    else if (count == 0)
+	      return -1;
+	    unitlen = arm_vfp_cprc_unit_length (*base_type);
+	    gdb_assert ((TYPE_LENGTH (t) % unitlen) == 0);
+	    return TYPE_LENGTH (t) / unitlen;
+	  }
       }
       break;
 
@@ -3899,13 +3936,13 @@ arm_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       while (len > 0)
 	{
 	  int partial_len = len < INT_REGISTER_SIZE ? len : INT_REGISTER_SIZE;
+	  CORE_ADDR regval
+	    = extract_unsigned_integer (val, partial_len, byte_order);
 
 	  if (may_use_core_reg && argreg <= ARM_LAST_ARG_REGNUM)
 	    {
 	      /* The argument is being passed in a general purpose
 		 register.  */
-	      CORE_ADDR regval
-		= extract_unsigned_integer (val, partial_len, byte_order);
 	      if (byte_order == BFD_ENDIAN_BIG)
 		regval <<= (INT_REGISTER_SIZE - partial_len) * 8;
 	      if (arm_debug)
@@ -3919,11 +3956,16 @@ arm_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	    }
 	  else
 	    {
+	      gdb_byte buf[INT_REGISTER_SIZE];
+
+	      memset (buf, 0, sizeof (buf));
+	      store_unsigned_integer (buf, partial_len, byte_order, regval);
+
 	      /* Push the arguments onto the stack.  */
 	      if (arm_debug)
 		fprintf_unfiltered (gdb_stdlog, "arg %d @ sp + %d\n",
 				    argnum, nstack);
-	      si = push_stack_item (si, val, INT_REGISTER_SIZE);
+	      si = push_stack_item (si, buf, INT_REGISTER_SIZE);
 	      nstack += INT_REGISTER_SIZE;
 	    }
 	      
@@ -4362,18 +4404,6 @@ bitcount (unsigned long val)
   for (nbits = 0; val != 0; nbits++)
     val &= val - 1;		/* Delete rightmost 1-bit in val.  */
   return nbits;
-}
-
-/* Return the size in bytes of the complete Thumb instruction whose
-   first halfword is INST1.  */
-
-static int
-thumb_insn_size (unsigned short inst1)
-{
-  if ((inst1 & 0xe000) == 0xe000 && (inst1 & 0x1800) != 0)
-    return 4;
-  else
-    return 2;
 }
 
 static int
@@ -9008,99 +9038,113 @@ arm_extract_return_value (struct type *type, struct regcache *regs,
 static int
 arm_return_in_memory (struct gdbarch *gdbarch, struct type *type)
 {
-  int nRc;
   enum type_code code;
 
   type = check_typedef (type);
 
-  /* In the ARM ABI, "integer" like aggregate types are returned in
-     registers.  For an aggregate type to be integer like, its size
-     must be less than or equal to INT_REGISTER_SIZE and the
-     offset of each addressable subfield must be zero.  Note that bit
-     fields are not addressable, and all addressable subfields of
-     unions always start at offset zero.
-
-     This function is based on the behaviour of GCC 2.95.1.
-     See: gcc/arm.c: arm_return_in_memory() for details.
-
-     Note: All versions of GCC before GCC 2.95.2 do not set up the
-     parameters correctly for a function returning the following
-     structure: struct { float f;}; This should be returned in memory,
-     not a register.  Richard Earnshaw sent me a patch, but I do not
-     know of any way to detect if a function like the above has been
-     compiled with the correct calling convention.  */
-
-  /* All aggregate types that won't fit in a register must be returned
-     in memory.  */
-  if (TYPE_LENGTH (type) > INT_REGISTER_SIZE)
-    {
-      return 1;
-    }
-
-  /* The AAPCS says all aggregates not larger than a word are returned
-     in a register.  */
-  if (gdbarch_tdep (gdbarch)->arm_abi != ARM_ABI_APCS)
+  /* Simple, non-aggregate types (ie not including vectors and
+     complex) are always returned in a register (or registers).  */
+  code = TYPE_CODE (type);
+  if (TYPE_CODE_STRUCT != code && TYPE_CODE_UNION != code
+      && TYPE_CODE_ARRAY != code && TYPE_CODE_COMPLEX != code)
     return 0;
 
-  /* The only aggregate types that can be returned in a register are
-     structs and unions.  Arrays must be returned in memory.  */
-  code = TYPE_CODE (type);
-  if ((TYPE_CODE_STRUCT != code) && (TYPE_CODE_UNION != code))
+  if (TYPE_CODE_ARRAY == code && TYPE_VECTOR (type))
     {
-      return 1;
+      /* Vector values should be returned using ARM registers if they
+	 are not over 16 bytes.  */
+      return (TYPE_LENGTH (type) > 16);
     }
 
-  /* Assume all other aggregate types can be returned in a register.
-     Run a check for structures, unions and arrays.  */
-  nRc = 0;
-
-  if ((TYPE_CODE_STRUCT == code) || (TYPE_CODE_UNION == code))
+  if (gdbarch_tdep (gdbarch)->arm_abi != ARM_ABI_APCS)
     {
-      int i;
-      /* Need to check if this struct/union is "integer" like.  For
-         this to be true, its size must be less than or equal to
-         INT_REGISTER_SIZE and the offset of each addressable
-         subfield must be zero.  Note that bit fields are not
-         addressable, and unions always start at offset zero.  If any
-         of the subfields is a floating point type, the struct/union
-         cannot be an integer type.  */
+      /* The AAPCS says all aggregates not larger than a word are returned
+	 in a register.  */
+      if (TYPE_LENGTH (type) <= INT_REGISTER_SIZE)
+	return 0;
 
-      /* For each field in the object, check:
-         1) Is it FP? --> yes, nRc = 1;
-         2) Is it addressable (bitpos != 0) and
-         not packed (bitsize == 0)?
-         --> yes, nRc = 1  
-       */
+      return 1;
+    }
+  else
+    {
+      int nRc;
 
-      for (i = 0; i < TYPE_NFIELDS (type); i++)
+      /* All aggregate types that won't fit in a register must be returned
+	 in memory.  */
+      if (TYPE_LENGTH (type) > INT_REGISTER_SIZE)
+	return 1;
+
+      /* In the ARM ABI, "integer" like aggregate types are returned in
+	 registers.  For an aggregate type to be integer like, its size
+	 must be less than or equal to INT_REGISTER_SIZE and the
+	 offset of each addressable subfield must be zero.  Note that bit
+	 fields are not addressable, and all addressable subfields of
+	 unions always start at offset zero.
+
+	 This function is based on the behaviour of GCC 2.95.1.
+	 See: gcc/arm.c: arm_return_in_memory() for details.
+
+	 Note: All versions of GCC before GCC 2.95.2 do not set up the
+	 parameters correctly for a function returning the following
+	 structure: struct { float f;}; This should be returned in memory,
+	 not a register.  Richard Earnshaw sent me a patch, but I do not
+	 know of any way to detect if a function like the above has been
+	 compiled with the correct calling convention.  */
+
+      /* Assume all other aggregate types can be returned in a register.
+	 Run a check for structures, unions and arrays.  */
+      nRc = 0;
+
+      if ((TYPE_CODE_STRUCT == code) || (TYPE_CODE_UNION == code))
 	{
-	  enum type_code field_type_code;
-	  field_type_code = TYPE_CODE (check_typedef (TYPE_FIELD_TYPE (type,
-								       i)));
+	  int i;
+	  /* Need to check if this struct/union is "integer" like.  For
+	     this to be true, its size must be less than or equal to
+	     INT_REGISTER_SIZE and the offset of each addressable
+	     subfield must be zero.  Note that bit fields are not
+	     addressable, and unions always start at offset zero.  If any
+	     of the subfields is a floating point type, the struct/union
+	     cannot be an integer type.  */
 
-	  /* Is it a floating point type field?  */
-	  if (field_type_code == TYPE_CODE_FLT)
-	    {
-	      nRc = 1;
-	      break;
-	    }
+	  /* For each field in the object, check:
+	     1) Is it FP? --> yes, nRc = 1;
+	     2) Is it addressable (bitpos != 0) and
+	     not packed (bitsize == 0)?
+	     --> yes, nRc = 1
+	  */
 
-	  /* If bitpos != 0, then we have to care about it.  */
-	  if (TYPE_FIELD_BITPOS (type, i) != 0)
+	  for (i = 0; i < TYPE_NFIELDS (type); i++)
 	    {
-	      /* Bitfields are not addressable.  If the field bitsize is 
-	         zero, then the field is not packed.  Hence it cannot be
-	         a bitfield or any other packed type.  */
-	      if (TYPE_FIELD_BITSIZE (type, i) == 0)
+	      enum type_code field_type_code;
+
+	      field_type_code
+		= TYPE_CODE (check_typedef (TYPE_FIELD_TYPE (type,
+							     i)));
+
+	      /* Is it a floating point type field?  */
+	      if (field_type_code == TYPE_CODE_FLT)
 		{
 		  nRc = 1;
 		  break;
 		}
+
+	      /* If bitpos != 0, then we have to care about it.  */
+	      if (TYPE_FIELD_BITPOS (type, i) != 0)
+		{
+		  /* Bitfields are not addressable.  If the field bitsize is 
+		     zero, then the field is not packed.  Hence it cannot be
+		     a bitfield or any other packed type.  */
+		  if (TYPE_FIELD_BITSIZE (type, i) == 0)
+		    {
+		      nRc = 1;
+		      break;
+		    }
+		}
 	    }
 	}
-    }
 
-  return nRc;
+      return nRc;
+    }
 }
 
 /* Write into appropriate registers a function return value of type
@@ -9255,12 +9299,11 @@ arm_return_value (struct gdbarch *gdbarch, struct value *function,
 	  || arm_return_in_memory (gdbarch, valtype))
 	return RETURN_VALUE_STRUCT_CONVENTION;
     }
-
-  /* AAPCS returns complex types longer than a register in memory.  */
-  if (tdep->arm_abi != ARM_ABI_APCS
-      && TYPE_CODE (valtype) == TYPE_CODE_COMPLEX
-      && TYPE_LENGTH (valtype) > INT_REGISTER_SIZE)
-    return RETURN_VALUE_STRUCT_CONVENTION;
+  else if (TYPE_CODE (valtype) == TYPE_CODE_COMPLEX)
+    {
+      if (arm_return_in_memory (gdbarch, valtype))
+	return RETURN_VALUE_STRUCT_CONVENTION;
+    }
 
   if (writebuf)
     arm_store_return_value (valtype, regcache, writebuf);
