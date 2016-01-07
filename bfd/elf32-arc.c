@@ -198,7 +198,7 @@ char * fini_str = FINI_SYM_STRING;
 
 #define ARC_RELOC_HOWTO(TYPE, VALUE, SIZE, BITSIZE, RELOC_FUNCTION, OVERFLOW, FORMULA) \
       case VALUE: \
-	return #TYPE; \
+	return "R_" #TYPE; \
 	break;
 
 static ATTRIBUTE_UNUSED const char *
@@ -817,7 +817,7 @@ get_middle_endian_relocation (bfd_vma reloc)
 	    (reloc_data.input_section->output_section->vma \
 	     + reloc_data.input_section->output_offset \
 	     + (reloc_data.reloc_offset) \
-	    ) & ~0x3)
+	    ))
 #define SECTSTAR (reloc_data.input_section->output_offset)
 #define SECTSTART (reloc_data.input_section->output_offset)
 #define _SDA_BASE_ (reloc_data.sdata_begin_symbol_vma)	
