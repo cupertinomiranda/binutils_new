@@ -363,7 +363,7 @@ static const struct arc_reloc_op_tag
   DEF (tlsgd,   BFD_RELOC_ARC_TLS_GD_GOT,	0),
   DEF (tlsie,   BFD_RELOC_ARC_TLS_IE_GOT,	0),
   DEF (tpoff9,  BFD_RELOC_ARC_TLS_LE_S9,	0),
-  DEF (tpoff,   BFD_RELOC_ARC_TLS_LE_32,	0),
+  DEF (tpoff,   BFD_RELOC_ARC_TLS_LE_32,	1),
   DEF (dtpoff9, BFD_RELOC_ARC_TLS_DTPOFF_S9,	0),
   DEF (dtpoff,  BFD_RELOC_ARC_TLS_DTPOFF,	0),
 };
