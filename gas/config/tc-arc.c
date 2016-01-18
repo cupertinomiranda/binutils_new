@@ -1303,7 +1303,6 @@ md_apply_fix (fixS *fixP,
     case BFD_RELOC_ARC_TLS_LE_32:
       if (fixP->fx_done)
 	break;
-      fixP->fx_offset = 0;
       /* Fall through.  */
     case BFD_RELOC_ARC_TLS_GD_GOT:
     case BFD_RELOC_ARC_TLS_IE_GOT:
