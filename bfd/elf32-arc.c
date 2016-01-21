@@ -2581,7 +2581,7 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
 #define elf_backend_finish_dynamic_sections  elf_arc_finish_dynamic_sections
 #define elf_backend_size_dynamic_sections    elf_arc_size_dynamic_sections
 
-#define elf_backend_can_gc_sections	1
+#define elf_backend_can_gc_sections	0
 #define elf_backend_want_got_plt	1
 #define elf_backend_plt_readonly	1
 #define elf_backend_rela_plts_and_copies_p 1
@@ -2589,16 +2589,16 @@ elf_arc_size_dynamic_sections (bfd * output_bfd, struct bfd_link_info *info)
 #define elf_backend_got_header_size	12
 
 //#define elf_backend_copy_indirect_symbol     elf32_arc_copy_indirect_symbol
-#define elf_backend_gc_sweep_hook	elf32_arc_gc_sweep_hook
+//#define elf_backend_gc_sweep_hook	elf32_arc_gc_sweep_hook
 
-static bfd_boolean
-elf32_arc_gc_sweep_hook (bfd *                     abfd,
-			 struct bfd_link_info *    info,
-			 asection *                sec,
-			 const Elf_Internal_Rela * relocs)
-{
-  return TRUE;
-}
+//static bfd_boolean
+//elf32_arc_gc_sweep_hook (bfd *                     abfd,
+//			 struct bfd_link_info *    info,
+//			 asection *                sec,
+//			 const Elf_Internal_Rela * relocs)
+//{
+//  return TRUE;
+//}
 
 
 #define elf_backend_may_use_rel_p	0
