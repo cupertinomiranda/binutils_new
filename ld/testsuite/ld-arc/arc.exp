@@ -86,7 +86,11 @@ if {[check_shared_lib_support]} {
     run_ld_link_tests $arcshared_tests
 
     #Other tests
+
+    #Dependent on support for GC
+    setup_xfail "arc-*"
     run_dump_test "gc-sections1"
+
     run_dump_test "gotpc1"
     run_dump_test "gotpc2"
 }
@@ -101,4 +105,7 @@ set arccommon_tests {
 run_ld_link_tests $arccommon_tests
 
 run_dump_test "unaligned-pc32"
+
+# TLS related relaxations
+setup_xfail "arc-*"
 run_dump_test "tls-data-sections"

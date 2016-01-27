@@ -10,6 +10,6 @@
 Disassembly of section \.text:
 
 000100d4 <__start>:
-   100d4:	2730 7f84 0000 00fc 	ld	r4,\[pcl,0xfc\]
+   100d4:	2730 7f84 0000 011c 	ld	r4,\[pcl,0x11c\]
 			100d8: R_ARC_GOTPC32	a_in_other_thread
    100dc:	1c00 0f80 0000 0001 	st[ \t]+0x1,\[r4,0\]
